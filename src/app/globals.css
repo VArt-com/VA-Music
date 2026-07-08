@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #0b0b0f;
+  color: #f2f2f5;
+}
+
+a {
+  transition: color 0.15s ease;
+}
