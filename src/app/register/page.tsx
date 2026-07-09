@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function RegisterPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,43 +31,43 @@ export default function RegisterPage() {
   if (done) {
     return (
       <main className="max-w-sm mx-auto px-4 py-16 text-center">
-        <p>Проверь почту {email} — мы отправили ссылку для подтверждения аккаунта.</p>
+        <p>{t.auth.checkEmail.replace('{email}', email)}</p>
       </main>
     );
   }
 
   return (
     <main className="max-w-sm mx-auto px-4 py-16">
-      <h1 className="text-xl font-bold mb-6">Регистрация</h1>
+      <h1 className="text-xl font-bold mb-6 neon-text">{t.auth.registerTitle}</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
           required
-          placeholder="Имя пользователя"
+          placeholder={t.auth.usernamePlaceholder}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
         />
         <input
           type="email"
           required
-          placeholder="Email"
+          placeholder={t.auth.emailPlaceholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
         />
         <input
           type="password"
           required
           minLength={6}
-          placeholder="Пароль (мин. 6 символов)"
+          placeholder={t.auth.passwordMinPlaceholder}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
         />
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button type="submit" className="w-full bg-pink-500 hover:bg-pink-400 rounded-lg py-2 font-medium">
-          Создать аккаунт
+        <button type="submit" className="w-full btn-neon rounded-lg py-2 font-medium">
+          {t.auth.registerSubmit}
         </button>
       </form>
     </main>

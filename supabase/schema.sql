@@ -1,4 +1,4 @@
--- MusicHub schema for Supabase
+-- Music World schema for Supabase
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> Run
 
 -- ============ PROFILES ============
@@ -187,6 +187,14 @@ create policy "Users update own avatar"
     bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+-- Covers had no delete policy originally — needed so users can clean up a
+-- track/video cover image when they delete the track/video itself.
+drop policy if exists "Users delete own covers" on storage.objects;
+create policy "Users delete own covers"
+  on storage.objects for delete using (
+    bucket_id = 'covers' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 -- ============ PLAY / DOWNLOAD COUNTERS ============
 create or replace function public.increment_play_count(track_id uuid)
 returns void as $$
@@ -199,5 +207,70 @@ create or replace function public.increment_download_count(track_id uuid)
 returns void as $$
 begin
   update public.tracks set download_count = download_count + 1 where id = track_id;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- ============ VIDEOS ============
+create table if not exists public.videos (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  description text,
+  tags text[] default '{}',
+  file_path text not null,
+  cover_path text,
+  duration_seconds integer,
+  view_count integer default 0,
+  download_count integer default 0,
+  created_at timestamptz default now()
+);
+
+alter table public.videos enable row level security;
+
+drop policy if exists "Videos are viewable by everyone" on public.videos;
+create policy "Videos are viewable by everyone"
+  on public.videos for select using (true);
+
+drop policy if exists "Users can insert own videos" on public.videos;
+create policy "Users can insert own videos"
+  on public.videos for insert with check (auth.uid() = artist_id);
+
+drop policy if exists "Users can update own videos" on public.videos;
+create policy "Users can update own videos"
+  on public.videos for update using (auth.uid() = artist_id);
+
+drop policy if exists "Users can delete own videos" on public.videos;
+create policy "Users can delete own videos"
+  on public.videos for delete using (auth.uid() = artist_id);
+
+insert into storage.buckets (id, name, public) values ('videos', 'videos', true) on conflict (id) do nothing;
+
+drop policy if exists "Public read videos" on storage.objects;
+create policy "Public read videos"
+  on storage.objects for select using (bucket_id = 'videos');
+
+drop policy if exists "Users upload own videos" on storage.objects;
+create policy "Users upload own videos"
+  on storage.objects for insert with check (
+    bucket_id = 'videos' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Users delete own videos" on storage.objects;
+create policy "Users delete own videos"
+  on storage.objects for delete using (
+    bucket_id = 'videos' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create or replace function public.increment_video_view_count(video_id uuid)
+returns void as $$
+begin
+  update public.videos set view_count = view_count + 1 where id = video_id;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace function public.increment_video_download_count(video_id uuid)
+returns void as $$
+begin
+  update public.videos set download_count = download_count + 1 where id = video_id;
 end;
 $$ language plpgsql security definer set search_path = public;

@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
-export default function UploadForm({ userId }: { userId: string }) {
+export default function VideoUploadForm({ userId }: { userId: string }) {
   const { t } = useI18n();
   const [title, setTitle] = useState('');
-  const [genre, setGenre] = useState('');
   const [tags, setTags] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -20,7 +19,7 @@ export default function UploadForm({ userId }: { userId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      setError(t.uploadForm.errorNoFile);
+      setError(t.videoUploadForm.errorNoFile);
       return;
     }
     setBusy(true);
@@ -30,7 +29,7 @@ export default function UploadForm({ userId }: { userId: string }) {
     const ext = file.name.split('.').pop();
     const filePath = `${userId}/${crypto.randomUUID()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from('tracks').upload(filePath, file);
+    const { error: uploadError } = await supabase.storage.from('videos').upload(filePath, file);
     if (uploadError) {
       setError(uploadError.message);
       setBusy(false);
@@ -44,14 +43,18 @@ export default function UploadForm({ userId }: { userId: string }) {
       await supabase.storage.from('covers').upload(coverPath, cover);
     }
 
-    const { data: track, error: insertError } = await supabase
-      .from('tracks')
+    const { data: video, error: insertError } = await supabase
+      .from('videos')
       .insert({
         artist_id: userId,
         title,
         description,
-        genre: genre || null,
-        tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        tags: tags
+          ? tags
+              .split(',')
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+          : [],
         file_path: filePath,
         cover_path: coverPath,
       })
@@ -63,7 +66,7 @@ export default function UploadForm({ userId }: { userId: string }) {
       setError(insertError.message);
       return;
     }
-    router.push(`/track/${track.id}`);
+    router.push(`/videos/${video.id}`);
   };
 
   return (
@@ -71,43 +74,36 @@ export default function UploadForm({ userId }: { userId: string }) {
       <input
         type="text"
         required
-        placeholder={t.uploadForm.titlePlaceholder}
+        placeholder={t.videoUploadForm.titlePlaceholder}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
       />
       <input
         type="text"
-        placeholder={t.uploadForm.genrePlaceholder}
-        value={genre}
-        onChange={(e) => setGenre(e.target.value)}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
-      />
-      <input
-        type="text"
-        placeholder={t.uploadForm.tagsPlaceholder}
+        placeholder={t.videoUploadForm.tagsPlaceholder}
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
       />
       <textarea
-        placeholder={t.uploadForm.descriptionPlaceholder}
+        placeholder={t.videoUploadForm.descriptionPlaceholder}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-fuchsia-400 transition"
       />
       <div>
-        <label className="block text-sm text-white/60 mb-1">{t.uploadForm.audioFileLabel}</label>
+        <label className="block text-sm text-white/60 mb-1">{t.videoUploadForm.videoFileLabel}</label>
         <input
           type="file"
-          accept="audio/*"
+          accept="video/*"
           required
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="w-full text-sm"
         />
       </div>
       <div>
-        <label className="block text-sm text-white/60 mb-1">{t.uploadForm.coverLabel}</label>
+        <label className="block text-sm text-white/60 mb-1">{t.videoUploadForm.coverLabel}</label>
         <input
           type="file"
           accept="image/*"
@@ -116,14 +112,10 @@ export default function UploadForm({ userId }: { userId: string }) {
         />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full btn-neon disabled:opacity-50 rounded-lg py-2 font-medium"
-      >
-        {busy ? t.uploadForm.uploading : t.uploadForm.publish}
+      <button type="submit" disabled={busy} className="w-full btn-neon disabled:opacity-50 rounded-lg py-2 font-medium">
+        {busy ? t.videoUploadForm.uploading : t.videoUploadForm.publish}
       </button>
-      <p className="text-xs text-white/40">{t.uploadForm.rightsNotice}</p>
+      <p className="text-xs text-white/40">{t.videoUploadForm.rightsNotice}</p>
     </form>
   );
 }

@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getDictionary } from '@/lib/i18n/server';
-import CreatePlaylistForm from '@/components/CreatePlaylistForm';
+import VideoUploadForm from '@/components/VideoUploadForm';
 
-export default async function NewPlaylistPage() {
+export default async function VideoUploadPage() {
   const supabase = await createClient();
   const t = await getDictionary();
   const {
@@ -12,9 +12,9 @@ export default async function NewPlaylistPage() {
   if (!user) redirect('/login');
 
   return (
-    <main className="max-w-lg mx-auto px-4 py-12">
-      <h1 className="text-xl font-bold mb-6">{t.playlists.newPageTitle}</h1>
-      <CreatePlaylistForm userId={user.id} />
+    <main className="max-w-lg mx-auto px-4 py-12 pb-32">
+      <h1 className="text-xl font-bold mb-6 neon-text">{t.videoUploadPage.title}</h1>
+      <VideoUploadForm userId={user.id} />
     </main>
   );
 }
