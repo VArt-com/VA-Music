@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '@/lib/player/PlayerContext';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import Visualizer from './Visualizer';
@@ -17,14 +17,36 @@ function formatTime(seconds: number) {
 }
 
 export default function PlayerBar() {
-  const { current, isPlaying, progress, duration, toggle, seek, analyser, volume, setVolume } = usePlayer();
+  const { current, isPlaying, progress, duration, toggle, seek, analyser, volume, setVolume, setPlayerBarHeight } =
+    usePlayer();
   const { t } = useI18n();
   const [showEq, setShowEq] = useState(false);
+  const barRef = useRef<HTMLDivElement | null>(null);
+
+  // Report the bar's real rendered height so PlayerBarSpacer can reserve the
+  // exact amount of space — including when the equalizer panel is open and
+  // the bar grows taller. Height resets to 0 as soon as playback stops.
+  useEffect(() => {
+    if (!current) {
+      setPlayerBarHeight(0);
+      return;
+    }
+    const el = barRef.current;
+    if (!el) return;
+    const update = () => setPlayerBarHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [current, showEq, setPlayerBarHeight]);
 
   if (!current) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-fuchsia-500/20 bg-black/80 backdrop-blur-xl animate-slide-up">
+    <div
+      ref={barRef}
+      className="fixed bottom-0 inset-x-0 z-50 border-t border-fuchsia-500/20 bg-black/80 backdrop-blur-xl animate-slide-up"
+    >
       {showEq && (
         <div className="max-w-3xl mx-auto px-4 pt-3">
           <Equalizer />

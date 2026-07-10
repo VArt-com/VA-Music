@@ -96,6 +96,7 @@ const en: Dictionary = {
   },
   uploadForm: {
     errorNoFile: 'Choose an audio file',
+    genericError: 'Failed to upload the file. Please try again.',
     titlePlaceholder: 'Track title',
     genrePlaceholder: 'Genre',
     tagsPlaceholder: 'Tags, comma-separated',
@@ -111,6 +112,7 @@ const en: Dictionary = {
   },
   videoUploadForm: {
     errorNoFile: 'Choose a video file',
+    genericError: 'Failed to upload the file. Please try again.',
     titlePlaceholder: 'Video title',
     tagsPlaceholder: 'Tags, comma-separated',
     descriptionPlaceholder: 'Description',

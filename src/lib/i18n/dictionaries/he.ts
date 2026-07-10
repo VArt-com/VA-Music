@@ -96,6 +96,7 @@ const he: Dictionary = {
   },
   uploadForm: {
     errorNoFile: 'בחרו קובץ אודיו',
+    genericError: 'העלאת הקובץ נכשלה. נסו שוב.',
     titlePlaceholder: 'שם הרצועה',
     genrePlaceholder: 'ז\'אנר',
     tagsPlaceholder: 'תגיות מופרדות בפסיק',
@@ -111,6 +112,7 @@ const he: Dictionary = {
   },
   videoUploadForm: {
     errorNoFile: 'בחרו קובץ וידאו',
+    genericError: 'העלאת הקובץ נכשלה. נסו שוב.',
     titlePlaceholder: 'שם הסרטון',
     tagsPlaceholder: 'תגיות מופרדות בפסיק',
     descriptionPlaceholder: 'תיאור',

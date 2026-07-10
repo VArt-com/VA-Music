@@ -96,6 +96,7 @@ const ar: Dictionary = {
   },
   uploadForm: {
     errorNoFile: 'اختر ملف صوتي',
+    genericError: 'فشل رفع الملف. حاول مرة أخرى.',
     titlePlaceholder: 'عنوان المقطوعة',
     genrePlaceholder: 'النوع الموسيقي',
     tagsPlaceholder: 'وسوم مفصولة بفواصل',
@@ -111,6 +112,7 @@ const ar: Dictionary = {
   },
   videoUploadForm: {
     errorNoFile: 'اختر ملف فيديو',
+    genericError: 'فشل رفع الملف. حاول مرة أخرى.',
     titlePlaceholder: 'عنوان الفيديو',
     tagsPlaceholder: 'وسوم مفصولة بفواصل',
     descriptionPlaceholder: 'الوصف',

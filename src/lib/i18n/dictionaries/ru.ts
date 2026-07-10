@@ -97,6 +97,7 @@ const ru: Dictionary = {
   },
   uploadForm: {
     errorNoFile: 'Выбери аудиофайл',
+    genericError: 'Не удалось загрузить файл. Попробуй ещё раз.',
     titlePlaceholder: 'Название трека',
     genrePlaceholder: 'Жанр',
     tagsPlaceholder: 'Теги через запятую',
@@ -113,6 +114,7 @@ const ru: Dictionary = {
   },
   videoUploadForm: {
     errorNoFile: 'Выбери видеофайл',
+    genericError: 'Не удалось загрузить файл. Попробуй ещё раз.',
     titlePlaceholder: 'Название видео',
     tagsPlaceholder: 'Теги через запятую',
     descriptionPlaceholder: 'Описание',

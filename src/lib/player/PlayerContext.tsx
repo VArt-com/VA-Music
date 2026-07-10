@@ -45,6 +45,9 @@ type PlayerContextType = {
   toggle: () => void;
   seek: (ratio: number) => void;
   setVolume: (value: number) => void;
+  /** Live-measured height (px) of the fixed PlayerBar, 0 when it isn't shown. */
+  playerBarHeight: number;
+  setPlayerBarHeight: (height: number) => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -71,6 +74,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [volume, setVolumeState] = useState(1);
   const [eq, setEqState] = useState<EQBands>(EQ_PRESETS.flat);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
+  const [playerBarHeight, setPlayerBarHeight] = useState(0);
 
   const ensureGraph = useCallback(() => {
     if (audioCtxRef.current || !audioRef.current) return;
@@ -200,6 +204,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         toggle,
         seek,
         setVolume,
+        playerBarHeight,
+        setPlayerBarHeight,
       }}
     >
       {children}

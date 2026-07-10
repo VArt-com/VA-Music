@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PlayerBar from '@/components/PlayerBar';
+import PlayerBarSpacer from '@/components/PlayerBarSpacer';
 import AmbientVisualizer from '@/components/AmbientVisualizer';
 import { PlayerProvider } from '@/lib/player/PlayerContext';
 import { I18nProvider } from '@/lib/i18n/I18nProvider';
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Header />
             {children}
             <Footer />
+            <PlayerBarSpacer />
             <PlayerBar />
           </PlayerProvider>
         </I18nProvider>

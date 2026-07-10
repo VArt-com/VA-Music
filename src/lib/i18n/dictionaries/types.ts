@@ -100,6 +100,7 @@ export type Dictionary = {
   };
   uploadForm: {
     errorNoFile: string;
+    genericError: string;
     titlePlaceholder: string;
     genrePlaceholder: string;
     tagsPlaceholder: string;
@@ -115,6 +116,7 @@ export type Dictionary = {
   };
   videoUploadForm: {
     errorNoFile: string;
+    genericError: string;
     titlePlaceholder: string;
     tagsPlaceholder: string;
     descriptionPlaceholder: string;

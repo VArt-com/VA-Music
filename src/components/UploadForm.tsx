@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { randomId } from '@/lib/id';
 
 export default function UploadForm({ userId }: { userId: string }) {
   const { t } = useI18n();
@@ -25,45 +26,49 @@ export default function UploadForm({ userId }: { userId: string }) {
     }
     setBusy(true);
     setError(null);
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    const ext = file.name.split('.').pop();
-    const filePath = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const ext = file.name.split('.').pop();
+      const filePath = `${userId}/${randomId()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from('tracks').upload(filePath, file);
-    if (uploadError) {
-      setError(uploadError.message);
+      const { error: uploadError } = await supabase.storage.from('tracks').upload(filePath, file);
+      if (uploadError) {
+        setError(uploadError.message);
+        return;
+      }
+
+      let coverPath: string | null = null;
+      if (cover) {
+        const coverExt = cover.name.split('.').pop();
+        coverPath = `${userId}/${randomId()}.${coverExt}`;
+        await supabase.storage.from('covers').upload(coverPath, cover);
+      }
+
+      const { data: track, error: insertError } = await supabase
+        .from('tracks')
+        .insert({
+          artist_id: userId,
+          title,
+          description,
+          genre: genre || null,
+          tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+          file_path: filePath,
+          cover_path: coverPath,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+      router.push(`/track/${track.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.uploadForm.genericError);
+    } finally {
       setBusy(false);
-      return;
     }
-
-    let coverPath: string | null = null;
-    if (cover) {
-      const coverExt = cover.name.split('.').pop();
-      coverPath = `${userId}/${crypto.randomUUID()}.${coverExt}`;
-      await supabase.storage.from('covers').upload(coverPath, cover);
-    }
-
-    const { data: track, error: insertError } = await supabase
-      .from('tracks')
-      .insert({
-        artist_id: userId,
-        title,
-        description,
-        genre: genre || null,
-        tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        file_path: filePath,
-        cover_path: coverPath,
-      })
-      .select()
-      .single();
-
-    setBusy(false);
-    if (insertError) {
-      setError(insertError.message);
-      return;
-    }
-    router.push(`/track/${track.id}`);
   };
 
   return (
@@ -100,7 +105,7 @@ export default function UploadForm({ userId }: { userId: string }) {
         <label className="block text-sm text-white/60 mb-1">{t.uploadForm.audioFileLabel}</label>
         <input
           type="file"
-          accept="audio/*"
+          accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.wma"
           required
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="w-full text-sm"
