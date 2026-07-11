@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -14,6 +14,18 @@ import { isRtl } from '@/lib/i18n/config';
 export const metadata: Metadata = {
   title: 'Music World — бесплатная музыка от независимых артистов',
   description: 'Загружай, слушай и скачивай музыку бесплатно. Поддержи артистов донатом.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#7c3aed',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
