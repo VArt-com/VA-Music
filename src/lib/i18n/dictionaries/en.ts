@@ -14,6 +14,8 @@ const en: Dictionary = {
     register: 'Sign up',
     donate: 'Donate',
     whatsapp: 'Message on WhatsApp',
+    installApp: 'Install',
+    installIosTip: 'Tap the Share icon at the bottom of the screen, then choose "Add to Home Screen".',
   },
   footer: {
     freeNotice: 'All music on the platform is free to listen to and download.',
