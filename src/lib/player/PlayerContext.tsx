@@ -114,12 +114,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const play = useCallback(
-    (track: NowPlaying) => {
+    async (track: NowPlaying) => {
       const audio = audioRef.current;
       if (!audio) return;
       audio.crossOrigin = 'anonymous';
       ensureGraph();
-      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+      // AudioContext starts (or resumes) suspended in some browsers even
+      // inside a click handler. If we call audio.play() before resume()
+      // actually finishes, the element visually "plays" but the Web Audio
+      // graph it's routed through is still silent — so the first click
+      // appears to do nothing and only a second click (after resume() has
+      // since settled) is audible. Awaiting it here fixes that.
+      if (audioCtxRef.current?.state === 'suspended') {
+        try {
+          await audioCtxRef.current.resume();
+        } catch {
+          // ignore — play() below still attempts native playback
+        }
+      }
       setCurrent((prev) => {
         if (prev?.id !== track.id) {
           audio.src = track.audioUrl;
@@ -131,10 +143,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [ensureGraph]
   );
 
-  const toggle = useCallback(() => {
+  const toggle = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+    if (audioCtxRef.current?.state === 'suspended') {
+      try {
+        await audioCtxRef.current.resume();
+      } catch {
+        // ignore
+      }
+    }
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
   }, []);

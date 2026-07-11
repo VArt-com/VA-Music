@@ -103,9 +103,18 @@ export default function MixerClient({ tracks }: { tracks: MixerTrackOption[] }) 
     };
   }, []);
 
-  const togglePlay = (deck: 'A' | 'B') => {
+  const togglePlay = async (deck: 'A' | 'B') => {
     ensureGraph();
-    if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+    // Awaiting resume() avoids a silent first click: without it, play()
+    // can fire while the Web Audio graph is still suspended, so the deck
+    // looks like it's playing but produces no sound until a second click.
+    if (audioCtxRef.current?.state === 'suspended') {
+      try {
+        await audioCtxRef.current.resume();
+      } catch {
+        // ignore
+      }
+    }
     const audio = deck === 'A' ? audioARef.current : audioBRef.current;
     if (!audio) return;
     if (audio.paused) audio.play().catch(() => {});
