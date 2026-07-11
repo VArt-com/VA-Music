@@ -13,6 +13,16 @@ export default function InstallAppButton({ label, iosTip }: { label: string; ios
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
 
+  // Register the service worker. Chrome/Edge will not consider this site
+  // "installable" (and will never fire beforeinstallprompt below) without
+  // one registered — this was missing before and is why the button never
+  // appeared.
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
