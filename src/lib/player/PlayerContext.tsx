@@ -66,6 +66,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const midRef = useRef<BiquadFilterNode | null>(null);
   const trebleRef = useRef<BiquadFilterNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const currentIdRef = useRef<string | null>(null);
 
   const [current, setCurrent] = useState<NowPlaying | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -132,12 +133,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           // ignore — play() below still attempts native playback
         }
       }
-      setCurrent((prev) => {
-        if (prev?.id !== track.id) {
-          audio.src = track.audioUrl;
-        }
-        return track;
-      });
+      // Assign the source directly here (NOT inside the setCurrent updater
+      // below) so it is guaranteed to be set before audio.play() runs.
+      // Setting it from inside a React state updater delays the actual
+      // assignment until the next render, which meant audio.play() below
+      // ran against an empty/stale source on the very first click for a
+      // track — failing silently — and only a second click (after the
+      // updater had flushed) actually worked.
+      if (currentIdRef.current !== track.id) {
+        audio.src = track.audioUrl;
+        currentIdRef.current = track.id;
+      }
+      setCurrent(track);
       audio.play().catch(() => {});
     },
     [ensureGraph]
