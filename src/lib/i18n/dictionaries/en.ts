@@ -106,6 +106,8 @@ const en: Dictionary = {
     uploading: 'Uploading...',
     publish: 'Publish',
     rightsNotice: "Only upload music you have the rights to (your own tracks, or with the rights holder's permission).",
+    multipleFilesNotice:
+      'You can select several audio files at once — each one becomes its own track, named after its filename. Genre, tags, description, and cover (if added) will be applied to all selected tracks. Max 50 MB per file.',
   },
   videoUploadPage: {
     title: 'Upload a video',
