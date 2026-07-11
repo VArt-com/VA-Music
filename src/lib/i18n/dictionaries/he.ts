@@ -14,6 +14,8 @@ const he: Dictionary = {
     register: 'הרשמה',
     donate: 'תרומה',
     whatsapp: 'לכתוב בוואטסאפ',
+    installApp: 'התקנה',
+    installIosTip: 'הקישו על סמל השיתוף בתחתית המסך, ואז בחרו "הוספה למסך הבית".',
   },
   footer: {
     freeNotice: 'כל המוזיקה בפלטפורמה חינמית להאזנה ולהורדה.',
