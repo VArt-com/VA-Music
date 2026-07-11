@@ -14,6 +14,8 @@ export type Dictionary = {
     register: string;
     donate: string;
     whatsapp: string;
+    installApp: string;
+    installIosTip: string;
   };
   footer: {
     freeNotice: string;
