@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getDictionary } from '@/lib/i18n/server';
 import LanguageSwitcher from './LanguageSwitcher';
 import WhatsAppIcon from './WhatsAppIcon';
+import InstallAppButton from './InstallAppButton';
 
 export default async function Header() {
   const supabase = await createClient();
@@ -73,6 +74,7 @@ export default async function Header() {
           >
             ☕ {t.nav.donate}
           </a>
+          <InstallAppButton label={t.nav.installApp} iosTip={t.nav.installIosTip} />
           <LanguageSwitcher />
         </nav>
       </div>
