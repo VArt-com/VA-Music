@@ -110,6 +110,7 @@ export type Dictionary = {
     uploading: string;
     publish: string;
     rightsNotice: string;
+    multipleFilesNotice: string;
   };
   videoUploadPage: {
     title: string;
