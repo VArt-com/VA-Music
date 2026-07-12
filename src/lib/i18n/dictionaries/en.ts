@@ -51,6 +51,7 @@ const en: Dictionary = {
     copied: 'Copied!',
     copyLink: 'Copy link',
     unknownArtist: 'Unknown artist',
+    addToPlaylist: 'Add to playlist',
   },
   home: {
     title: 'Fresh music',
