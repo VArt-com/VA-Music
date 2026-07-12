@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import PlayerBar from '@/components/PlayerBar';
 import PlayerBarSpacer from '@/components/PlayerBarSpacer';
 import AmbientVisualizer from '@/components/AmbientVisualizer';
+import CreatorBadge from '@/components/CreatorBadge';
 import { PlayerProvider } from '@/lib/player/PlayerContext';
 import { I18nProvider } from '@/lib/i18n/I18nProvider';
 import { getLocale } from '@/lib/i18n/server';
@@ -39,6 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <I18nProvider locale={locale} dict={dict} dictionaries={dictionaries}>
           <PlayerProvider>
             <AmbientVisualizer />
+            <CreatorBadge />
             <Header />
             {children}
             <Footer />
