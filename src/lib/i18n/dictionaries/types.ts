@@ -55,6 +55,7 @@ export type Dictionary = {
     copied: string;
     copyLink: string;
     unknownArtist: string;
+    addToPlaylist: string;
   };
   home: {
     title: string;
