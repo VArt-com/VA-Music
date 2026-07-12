@@ -57,6 +57,10 @@ const he: Dictionary = {
     subtitle: 'האזינו והורידו בחינם — רצועות של אמנים עצמאיים מכל העולם.',
     searchPlaceholder: 'חיפוש רצועות...',
     empty: 'אין עדיין רצועות. היו הראשונים — העלו את המוזיקה שלכם!',
+    statsLine: 'בפלטפורמה: {tracks} רצועות ו-{videos} סרטונים',
+    prevPage: '← הקודם',
+    nextPage: 'הבא →',
+    pageInfo: 'עמוד {page} מתוך {total}',
   },
   artist: {
     tracksHeading: 'רצועות',
