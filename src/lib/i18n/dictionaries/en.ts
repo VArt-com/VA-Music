@@ -53,7 +53,6 @@ const en: Dictionary = {
     unknownArtist: 'Unknown artist',
     addToPlaylist: 'Add to playlist',
   },
-  },
   home: {
     title: 'Fresh music',
     subtitle: 'Listen and download for free — tracks from independent artists worldwide.',
