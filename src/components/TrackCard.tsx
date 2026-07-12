@@ -7,6 +7,7 @@ import { usePlayer, type NowPlaying } from '@/lib/player/PlayerContext';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import DeleteButton from './DeleteButton';
 import ShareButtons from './ShareButtons';
+import AddToPlaylistButton from './AddToPlaylistButton';
 
 export default function TrackCard({
   track,
@@ -106,6 +107,7 @@ export default function TrackCard({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        <AddToPlaylistButton trackId={track.id} userId={currentUserId} />
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
         
           href={downloadUrl}
