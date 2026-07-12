@@ -120,6 +120,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       source.connect(bass).connect(mid).connect(treble).connect(analyser).connect(audioCtx.destination);
 
+      // iOS in particular will silently suspend the AudioContext when the
+      // tab is backgrounded / the screen locks, even though the underlying
+      // <audio> element keeps "playing" — since all our sound is routed
+      // through this graph (for the equalizer/visualizer), a suspended
+      // context means total silence even though nothing looks wrong in JS.
+      // Fight back immediately whenever the browser tries to suspend it
+      // while we still expect audio to be playing.
+      audioCtx.addEventListener('statechange', () => {
+        if (audioCtx.state === 'suspended' && audioRef.current && !audioRef.current.paused) {
+          audioCtx.resume().catch(() => {});
+        }
+      });
+
       audioCtxRef.current = audioCtx;
       sourceRef.current = source;
       bassRef.current = bass;
@@ -250,9 +263,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const onPause = () => setIsPlaying(false);
     const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
     const onLoaded = () => setDuration(audio.duration || 0);
-    // When a track finishes — including while the screen is locked — move
-    // on to the next track in the queue automatically, instead of just
-    // stopping and waiting for the user to unlock and tap next.
     const onEnded = () => {
       const q = queueRef.current;
       const i = queueIndexRef.current;
@@ -278,100 +288,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [playTrack]);
 
-  // Media Session integration: without this, mobile browsers have no signal
-  // that this <audio> element is a "real" media playback session, and will
-  // often pause it as soon as the tab is backgrounded / the screen locks.
-  // Registering metadata + action handlers is what makes lock-screen
-  // controls appear and keeps playback alive while the screen is off.
+  // Extra safety net for iOS: whenever the tab/page becomes visible again
+  // (unlocking the screen, switching back from another app), or the window
+  // regains focus, immediately try to resume the Web Audio graph if it was
+  // supposed to be playing but got suspended by the OS in the meantime.
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !current) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: current.title,
-      artist: current.artist,
-      artwork: current.coverUrl
-        ? [
-            { src: current.coverUrl, sizes: '96x96', type: 'image/png' },
-            { src: current.coverUrl, sizes: '256x256', type: 'image/png' },
-            { src: current.coverUrl, sizes: '512x512', type: 'image/png' },
-          ]
-        : [],
-    });
-  }, [current]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
-    const audio = audioRef.current;
-
-    navigator.mediaSession.setActionHandler('play', () => {
-      audio?.play().catch(() => {});
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      audio?.pause();
-    });
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (audio && details.seekTime != null) {
-        audio.currentTime = details.seekTime;
+    if (typeof document === 'undefined') return;
+    const resumeIfNeeded = () => {
+      const ctx = audioCtxRef.current;
+      const audio = audioRef.current;
+      if (ctx && ctx.state === 'suspended' && audio && !audio.paused) {
+        ctx.resume().catch(() => {});
       }
-    });
-    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-      if (audio) audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
-    });
-    navigator.mediaSession.setActionHandler('seekforward', (details) => {
-      if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
-    });
-    // These two are what make ⏭ / ⏮ appear on the lock screen / notification.
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      next();
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      previous();
-    });
-
-    return () => {
-      navigator.mediaSession.setActionHandler('play', null);
-      navigator.mediaSession.setActionHandler('pause', null);
-      navigator.mediaSession.setActionHandler('seekto', null);
-      navigator.mediaSession.setActionHandler('seekbackward', null);
-      navigator.mediaSession.setActionHandler('seekforward', null);
-      navigator.mediaSession.setActionHandler('nexttrack', null);
-      navigator.mediaSession.setActionHandler('previoustrack', null);
     };
-  }, [next, previous]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-  }, [isPlaying]);
-
-  return (
-    <PlayerContext.Provider
-      value={{
-        current,
-        isPlaying,
-        progress,
-        duration,
-        volume,
-        analyser: analyserNode,
-        eq,
-        setEq,
-        applyPreset,
-        play,
-        playQueue,
-        next,
-        previous,
-        hasNext: queueIndex + 1 < queue.length,
-        hasPrevious: queueIndex > 0,
-        toggle,
-        seek,
-        setVolume,
-        playerBarHeight,
-        setPlayerBarHeight,
-      }}
-    >
-      {children}
-      {/* Single persistent <audio> element shared by the whole app so playback
-          survives navigation between pages. */}
-      <audio ref={audioRef} preload="metadata" />
-    </PlayerContext.Provider>
-  );
-}
+    document.addEventListener('visi
