@@ -51,6 +51,7 @@ const ru: Dictionary = {
     copied: 'Скопировано!',
     copyLink: 'Скопировать ссылку',
     unknownArtist: 'Неизвестный артист',
+    addToPlaylist: 'Добавить в плейлист',
   },
   home: {
     title: 'Свежая музыка',
