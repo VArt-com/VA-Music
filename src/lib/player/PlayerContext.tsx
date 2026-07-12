@@ -42,6 +42,11 @@ type PlayerContextType = {
   setEq: (band: Partial<EQBands>) => void;
   applyPreset: (name: string) => void;
   play: (track: NowPlaying) => void;
+  playQueue: (tracks: NowPlaying[], startIndex: number) => void;
+  next: () => void;
+  previous: () => void;
+  hasNext: boolean;
+  hasPrevious: boolean;
   toggle: () => void;
   seek: (ratio: number) => void;
   setVolume: (value: number) => void;
@@ -76,6 +81,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [eq, setEqState] = useState<EQBands>(EQ_PRESETS.flat);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [playerBarHeight, setPlayerBarHeight] = useState(0);
+
+  // Track queue (e.g. the full list of tracks visible on the current page),
+  // so we know what "next" and "previous" mean, and so we can auto-advance
+  // when a track ends — including while the phone screen is locked.
+  const [queue, setQueue] = useState<NowPlaying[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const queueRef = useRef<NowPlaying[]>([]);
+  const queueIndexRef = useRef(0);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+  useEffect(() => {
+    queueIndexRef.current = queueIndex;
+  }, [queueIndex]);
 
   const ensureGraph = useCallback(() => {
     if (audioCtxRef.current || !audioRef.current) return;
@@ -114,18 +134,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const play = useCallback(
+  // Low-level: actually load + play a given track, without touching the queue.
+  const playTrack = useCallback(
     async (track: NowPlaying) => {
       const audio = audioRef.current;
       if (!audio) return;
       audio.crossOrigin = 'anonymous';
       ensureGraph();
-      // AudioContext starts (or resumes) suspended in some browsers even
-      // inside a click handler. If we call audio.play() before resume()
-      // actually finishes, the element visually "plays" but the Web Audio
-      // graph it's routed through is still silent — so the first click
-      // appears to do nothing and only a second click (after resume() has
-      // since settled) is audible. Awaiting it here fixes that.
       if (audioCtxRef.current?.state === 'suspended') {
         try {
           await audioCtxRef.current.resume();
@@ -133,13 +148,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           // ignore — play() below still attempts native playback
         }
       }
-      // Assign the source directly here (NOT inside the setCurrent updater
-      // below) so it is guaranteed to be set before audio.play() runs.
-      // Setting it from inside a React state updater delays the actual
-      // assignment until the next render, which meant audio.play() below
-      // ran against an empty/stale source on the very first click for a
-      // track — failing silently — and only a second click (after the
-      // updater had flushed) actually worked.
       if (currentIdRef.current !== track.id) {
         audio.src = track.audioUrl;
         currentIdRef.current = track.id;
@@ -149,6 +157,49 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     },
     [ensureGraph]
   );
+
+  // Public: play a single track on its own (resets the queue to just this track).
+  const play = useCallback(
+    (track: NowPlaying) => {
+      setQueue([track]);
+      setQueueIndex(0);
+      playTrack(track);
+    },
+    [playTrack]
+  );
+
+  // Public: play a track from within a list, remembering the whole list so
+  // "next"/"previous" (and auto-advance on end) know what to do.
+  const playQueue = useCallback(
+    (tracks: NowPlaying[], startIndex: number) => {
+      const track = tracks[startIndex];
+      if (!track) return;
+      setQueue(tracks);
+      setQueueIndex(startIndex);
+      playTrack(track);
+    },
+    [playTrack]
+  );
+
+  const next = useCallback(() => {
+    const q = queueRef.current;
+    const i = queueIndexRef.current;
+    if (i + 1 < q.length) {
+      const idx = i + 1;
+      setQueueIndex(idx);
+      playTrack(q[idx]);
+    }
+  }, [playTrack]);
+
+  const previous = useCallback(() => {
+    const q = queueRef.current;
+    const i = queueIndexRef.current;
+    if (i > 0) {
+      const idx = i - 1;
+      setQueueIndex(idx);
+      playTrack(q[idx]);
+    }
+  }, [playTrack]);
 
   const toggle = useCallback(async () => {
     const audio = audioRef.current;
@@ -199,19 +250,33 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const onPause = () => setIsPlaying(false);
     const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
     const onLoaded = () => setDuration(audio.duration || 0);
+    // When a track finishes — including while the screen is locked — move
+    // on to the next track in the queue automatically, instead of just
+    // stopping and waiting for the user to unlock and tap next.
+    const onEnded = () => {
+      const q = queueRef.current;
+      const i = queueIndexRef.current;
+      if (i + 1 < q.length) {
+        const idx = i + 1;
+        setQueueIndex(idx);
+        playTrack(q[idx]);
+      } else {
+        setIsPlaying(false);
+      }
+    };
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadedmetadata', onLoaded);
-    audio.addEventListener('ended', onPause);
+    audio.addEventListener('ended', onEnded);
     return () => {
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('timeupdate', onTime);
       audio.removeEventListener('loadedmetadata', onLoaded);
-      audio.removeEventListener('ended', onPause);
+      audio.removeEventListener('ended', onEnded);
     };
-  }, []);
+  }, [playTrack]);
 
   // Media Session integration: without this, mobile browsers have no signal
   // that this <audio> element is a "real" media playback session, and will
@@ -254,6 +319,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     navigator.mediaSession.setActionHandler('seekforward', (details) => {
       if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
     });
+    // These two are what make ⏭ / ⏮ appear on the lock screen / notification.
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      next();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      previous();
+    });
 
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
@@ -261,8 +333,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       navigator.mediaSession.setActionHandler('seekto', null);
       navigator.mediaSession.setActionHandler('seekbackward', null);
       navigator.mediaSession.setActionHandler('seekforward', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('previoustrack', null);
     };
-  }, []);
+  }, [next, previous]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
@@ -282,6 +356,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         setEq,
         applyPreset,
         play,
+        playQueue,
+        next,
+        previous,
+        hasNext: queueIndex + 1 < queue.length,
+        hasPrevious: queueIndex > 0,
         toggle,
         seek,
         setVolume,
