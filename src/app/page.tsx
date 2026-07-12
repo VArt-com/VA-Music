@@ -15,7 +15,9 @@ export default async function HomePage({
   const { q, page: pageParam } = await searchParams;
   const supabase = await createClient();
   const t = await getDictionary();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
@@ -47,24 +49,21 @@ export default async function HomePage({
     return qs ? `/?${qs}` : '/';
   };
 
-  const trackList = (tracks as Track[] | null) ?? [];
-
-  // Build the full playable queue up front so the player can auto-advance
-  // to the next track when one ends — including while the screen is locked.
-  const nowPlayingList: NowPlaying[] = trackList.map((track) => {
-    const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
-    const coverUrl = track.cover_path
-      ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
-      : null;
-    return {
-      id: track.id,
-      title: track.title,
-      artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
-      artistId: track.artist_id,
-      audioUrl,
-      coverUrl,
-    };
-  });
+  const nowPlayingList: NowPlaying[] =
+    (tracks as Track[] | null)?.map((track) => {
+      const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
+      const coverUrl = track.cover_path
+        ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
+        : null;
+      return {
+        id: track.id,
+        title: track.title,
+        artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
+        artistId: track.artist_id,
+        audioUrl,
+        coverUrl,
+      };
+    }) ?? [];
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
@@ -78,11 +77,16 @@ export default async function HomePage({
         </p>
       </div>
       <form className="mb-6" action="/">
-        <input type="text" name="q" defaultValue={q} placeholder={t.home.searchPlaceholder}
-          className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 outline-none focus:border-fuchsia-400 transition" />
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder={t.home.searchPlaceholder}
+          className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 outline-none focus:border-fuchsia-400 transition"
+        />
       </form>
       <div className="space-y-3">
-        {trackList.map((track, index) => {
+        {(tracks as Track[] | null)?.map((track, index) => {
           const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
           const downloadUrl = `${audioUrl}?download=${encodeURIComponent(track.title)}`;
           const coverUrl = track.cover_path
@@ -102,7 +106,7 @@ export default async function HomePage({
             />
           );
         })}
-        {trackList.length === 0 && <p className="text-white/50 text-center py-12">{t.home.empty}</p>}
+        {(!tracks || tracks.length === 0) && <p className="text-white/50 text-center py-12">{t.home.empty}</p>}
       </div>
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 text-sm">
@@ -110,7 +114,9 @@ export default async function HomePage({
             <Link href={pageHref(page - 1)} className="text-fuchsia-300 hover:text-fuchsia-200 transition">
               {t.home.prevPage}
             </Link>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           <span className="text-white/40">
             {t.home.pageInfo.replace('{page}', String(page)).replace('{total}', String(totalPages))}
           </span>
@@ -118,7 +124,9 @@ export default async function HomePage({
             <Link href={pageHref(page + 1)} className="text-fuchsia-300 hover:text-fuchsia-200 transition">
               {t.home.nextPage}
             </Link>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
         </div>
       )}
     </main>
