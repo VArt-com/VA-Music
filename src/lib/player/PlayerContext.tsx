@@ -213,6 +213,62 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Media Session integration: without this, mobile browsers have no signal
+  // that this <audio> element is a "real" media playback session, and will
+  // often pause it as soon as the tab is backgrounded / the screen locks.
+  // Registering metadata + action handlers is what makes lock-screen
+  // controls appear and keeps playback alive while the screen is off.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !current) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: current.title,
+      artist: current.artist,
+      artwork: current.coverUrl
+        ? [
+            { src: current.coverUrl, sizes: '96x96', type: 'image/png' },
+            { src: current.coverUrl, sizes: '256x256', type: 'image/png' },
+            { src: current.coverUrl, sizes: '512x512', type: 'image/png' },
+          ]
+        : [],
+    });
+  }, [current]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    const audio = audioRef.current;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      audio?.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audio?.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (audio && details.seekTime != null) {
+        audio.currentTime = details.seekTime;
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      if (audio) audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
+    });
+
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekto', null);
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
   return (
     <PlayerContext.Provider
       value={{
