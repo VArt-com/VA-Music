@@ -61,6 +61,10 @@ export type Dictionary = {
     subtitle: string;
     searchPlaceholder: string;
     empty: string;
+    statsLine: string;
+    prevPage: string;
+    nextPage: string;
+    pageInfo: string;
   };
   artist: {
     tracksHeading: string;
