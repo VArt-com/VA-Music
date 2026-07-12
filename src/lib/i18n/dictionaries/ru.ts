@@ -57,6 +57,10 @@ const ru: Dictionary = {
     subtitle: 'Слушай и качай бесплатно — треки независимых артистов со всего мира.',
     searchPlaceholder: 'Поиск треков...',
     empty: 'Пока нет треков. Будь первым — загрузи свою музыку!',
+    statsLine: 'На платформе: {tracks} треков и {videos} видео',
+    prevPage: '← Назад',
+    nextPage: 'Вперёд →',
+    pageInfo: 'Страница {page} из {total}',
   },
   artist: {
     tracksHeading: 'Треки',
