@@ -25,7 +25,6 @@ export default function TrackCard({
   coverUrl?: string | null;
   currentUserId?: string | null;
   sharePath?: string;
-  /** Full list of tracks this card belongs to, so play/next/previous work across the list. */
   queue?: NowPlaying[];
   queueIndex?: number;
 }) {
