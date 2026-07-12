@@ -57,6 +57,10 @@ const en: Dictionary = {
     subtitle: 'Listen and download for free — tracks from independent artists worldwide.',
     searchPlaceholder: 'Search tracks...',
     empty: 'No tracks yet. Be the first — upload your music!',
+    statsLine: '{tracks} tracks and {videos} videos on the platform',
+    prevPage: '← Previous',
+    nextPage: 'Next →',
+    pageInfo: 'Page {page} of {total}',
   },
   artist: {
     tracksHeading: 'Tracks',
