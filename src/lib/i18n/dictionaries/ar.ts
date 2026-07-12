@@ -57,6 +57,10 @@ const ar: Dictionary = {
     subtitle: 'استمع وحمّل مجانًا — مقطوعات لفنانين مستقلين من كل أنحاء العالم.',
     searchPlaceholder: 'بحث عن مقطوعات...',
     empty: 'لا توجد مقطوعات بعد. كن أول من يرفع موسيقاه!',
+    statsLine: 'على المنصة: {tracks} مقطوعة و {videos} فيديو',
+    prevPage: '← السابق',
+    nextPage: 'التالي →',
+    pageInfo: 'صفحة {page} من {total}',
   },
   artist: {
     tracksHeading: 'المقطوعات',
