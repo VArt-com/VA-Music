@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getDictionary } from '@/lib/i18n/server';
 import TrackCard from '@/components/TrackCard';
 import type { Track } from '@/lib/types';
+import type { NowPlaying } from '@/lib/player/PlayerContext';
 
 const PAGE_SIZE = 50;
 
@@ -46,6 +47,25 @@ export default async function HomePage({
     return qs ? `/?${qs}` : '/';
   };
 
+  const trackList = (tracks as Track[] | null) ?? [];
+
+  // Build the full playable queue up front so the player can auto-advance
+  // to the next track when one ends — including while the screen is locked.
+  const nowPlayingList: NowPlaying[] = trackList.map((track) => {
+    const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
+    const coverUrl = track.cover_path
+      ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
+      : null;
+    return {
+      id: track.id,
+      title: track.title,
+      artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
+      artistId: track.artist_id,
+      audioUrl,
+      coverUrl,
+    };
+  });
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
       <div className="mb-8">
@@ -62,18 +82,27 @@ export default async function HomePage({
           className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 outline-none focus:border-fuchsia-400 transition" />
       </form>
       <div className="space-y-3">
-        {(tracks as Track[] | null)?.map((track) => {
+        {trackList.map((track, index) => {
           const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
           const downloadUrl = `${audioUrl}?download=${encodeURIComponent(track.title)}`;
           const coverUrl = track.cover_path
             ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
             : null;
           return (
-            <TrackCard key={track.id} track={track} audioUrl={audioUrl} downloadUrl={downloadUrl}
-              coverUrl={coverUrl} currentUserId={user?.id ?? null} sharePath={`/track/${track.id}`} />
+            <TrackCard
+              key={track.id}
+              track={track}
+              audioUrl={audioUrl}
+              downloadUrl={downloadUrl}
+              coverUrl={coverUrl}
+              currentUserId={user?.id ?? null}
+              sharePath={`/track/${track.id}`}
+              queue={nowPlayingList}
+              queueIndex={index}
+            />
           );
         })}
-        {(!tracks || tracks.length === 0) && <p className="text-white/50 text-center py-12">{t.home.empty}</p>}
+        {trackList.length === 0 && <p className="text-white/50 text-center py-12">{t.home.empty}</p>}
       </div>
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 text-sm">
