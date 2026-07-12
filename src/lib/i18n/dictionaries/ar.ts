@@ -51,6 +51,7 @@ const ar: Dictionary = {
     copied: 'تم النسخ!',
     copyLink: 'نسخ الرابط',
     unknownArtist: 'فنان غير معروف',
+    addToPlaylist: 'أضف إلى قائمة التشغيل',
   },
   home: {
     title: 'موسيقى جديدة',
