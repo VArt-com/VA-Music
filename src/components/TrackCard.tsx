@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Track } from '@/lib/types';
-import { usePlayer } from '@/lib/player/PlayerContext';
+import { usePlayer, type NowPlaying } from '@/lib/player/PlayerContext';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import DeleteButton from './DeleteButton';
 import ShareButtons from './ShareButtons';
@@ -15,6 +15,8 @@ export default function TrackCard({
   coverUrl = null,
   currentUserId = null,
   sharePath,
+  queue,
+  queueIndex,
 }: {
   track: Track;
   audioUrl: string;
@@ -22,8 +24,11 @@ export default function TrackCard({
   coverUrl?: string | null;
   currentUserId?: string | null;
   sharePath?: string;
+  /** Full list of tracks this card belongs to, so play/next/previous work across the list. */
+  queue?: NowPlaying[];
+  queueIndex?: number;
 }) {
-  const { current, isPlaying, play, toggle } = usePlayer();
+  const { current, isPlaying, play, playQueue, toggle } = usePlayer();
   const { t } = useI18n();
   const isCurrent = current?.id === track.id;
   const isOwner = Boolean(currentUserId && currentUserId === track.artist_id);
@@ -35,14 +40,18 @@ export default function TrackCard({
     }
     const supabase = createClient();
     supabase.rpc('increment_play_count', { track_id: track.id }).then(() => {});
-    play({
-      id: track.id,
-      title: track.title,
-      artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
-      artistId: track.artist_id,
-      audioUrl,
-      coverUrl,
-    });
+    if (queue && queueIndex !== undefined) {
+      playQueue(queue, queueIndex);
+    } else {
+      play({
+        id: track.id,
+        title: track.title,
+        artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
+        artistId: track.artist_id,
+        audioUrl,
+        coverUrl,
+      });
+    }
   };
 
   const handleDownload = async () => {
@@ -98,7 +107,7 @@ export default function TrackCard({
 
       <div className="flex items-center gap-2 shrink-0">
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
-        <a
+        
           href={downloadUrl}
           onClick={handleDownload}
           className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition"
