@@ -51,6 +51,7 @@ const he: Dictionary = {
     copied: 'הועתק!',
     copyLink: 'העתקת קישור',
     unknownArtist: 'אמן לא ידוע',
+    addToPlaylist: 'הוספה לפלייליסט',
   },
   home: {
     title: 'מוזיקה חדשה',
