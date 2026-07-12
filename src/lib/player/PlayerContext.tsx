@@ -50,7 +50,6 @@ type PlayerContextType = {
   toggle: () => void;
   seek: (ratio: number) => void;
   setVolume: (value: number) => void;
-  /** Live-measured height (px) of the fixed PlayerBar, 0 when it isn't shown. */
   playerBarHeight: number;
   setPlayerBarHeight: (height: number) => void;
 };
@@ -64,7 +63,14 @@ export function usePlayer() {
 }
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  // Foreground element: routed through the Web Audio graph for the EQ/visualizer.
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Background element: plain, never touched by Web Audio — iOS keeps this
+  // one playing through a lock screen the same way it would a native app,
+  // because it isn't going through the graph iOS suspends on lock.
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bgPrimedRef = useRef(false);
+
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const bassRef = useRef<BiquadFilterNode | null>(null);
@@ -82,9 +88,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [playerBarHeight, setPlayerBarHeight] = useState(0);
 
-  // Track queue (e.g. the full list of tracks visible on the current page),
-  // so we know what "next" and "previous" mean, and so we can auto-advance
-  // when a track ends — including while the phone screen is locked.
   const [queue, setQueue] = useState<NowPlaying[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const queueRef = useRef<NowPlaying[]>([]);
@@ -120,13 +123,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       source.connect(bass).connect(mid).connect(treble).connect(analyser).connect(audioCtx.destination);
 
-      // iOS in particular will silently suspend the AudioContext when the
-      // tab is backgrounded / the screen locks, even though the underlying
-      // <audio> element keeps "playing" — since all our sound is routed
-      // through this graph (for the equalizer/visualizer), a suspended
-      // context means total silence even though nothing looks wrong in JS.
-      // Fight back immediately whenever the browser tries to suspend it
-      // while we still expect audio to be playing.
       audioCtx.addEventListener('statechange', () => {
         if (audioCtx.state === 'suspended' && audioRef.current && !audioRef.current.paused) {
           audioCtx.resume().catch(() => {});
@@ -147,31 +143,68 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Low-level: actually load + play a given track, without touching the queue.
+  const advanceOnEnded = useCallback(() => {
+    const q = queueRef.current;
+    const i = queueIndexRef.current;
+    if (i + 1 < q.length) {
+      const idx = i + 1;
+      setQueueIndex(idx);
+      playTrack(q[idx]);
+    } else {
+      setIsPlaying(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Low-level: actually load + play a given track, without touching the
+  // queue. Picks whichever <audio> element matches the current visibility —
+  // the EQ'd one while the app is visible, the plain one while hidden/locked
+  // — so this one function correctly handles both normal playback and
+  // lock-screen next/previous/auto-advance.
   const playTrack = useCallback(
     async (track: NowPlaying) => {
-      const audio = audioRef.current;
+      const hidden = typeof document !== 'undefined' && document.hidden;
+      const audio = hidden ? bgAudioRef.current : audioRef.current;
+      const other = hidden ? audioRef.current : bgAudioRef.current;
       if (!audio) return;
-      audio.crossOrigin = 'anonymous';
-      ensureGraph();
-      if (audioCtxRef.current?.state === 'suspended') {
-        try {
-          await audioCtxRef.current.resume();
-        } catch {
-          // ignore — play() below still attempts native playback
+
+      if (!hidden) {
+        audio.crossOrigin = 'anonymous';
+        ensureGraph();
+        // "Prime" the background element once, inside this same user-gesture
+        // call, so iOS allows it to autoplay later without a fresh gesture
+        // when we hand off to it on screen lock.
+        if (!bgPrimedRef.current && bgAudioRef.current) {
+          const bg = bgAudioRef.current;
+          bgPrimedRef.current = true;
+          bg.muted = true;
+          bg.play()
+            .then(() => bg.pause())
+            .catch(() => {})
+            .finally(() => {
+              bg.muted = false;
+            });
+        }
+        if (audioCtxRef.current?.state === 'suspended') {
+          try {
+            await audioCtxRef.current.resume();
+          } catch {
+            // ignore — play() below still attempts native playback
+          }
         }
       }
-      if (currentIdRef.current !== track.id) {
+
+      if (currentIdRef.current !== track.id || audio.src !== track.audioUrl) {
         audio.src = track.audioUrl;
         currentIdRef.current = track.id;
       }
       setCurrent(track);
       audio.play().catch(() => {});
+      if (other && !other.paused) other.pause();
     },
     [ensureGraph]
   );
 
-  // Public: play a single track on its own (resets the queue to just this track).
   const play = useCallback(
     (track: NowPlaying) => {
       setQueue([track]);
@@ -181,8 +214,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [playTrack]
   );
 
-  // Public: play a track from within a list, remembering the whole list so
-  // "next"/"previous" (and auto-advance on end) know what to do.
   const playQueue = useCallback(
     (tracks: NowPlaying[], startIndex: number) => {
       const track = tracks[startIndex];
@@ -214,8 +245,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [playTrack]);
 
+  const getActiveAudio = useCallback(() => {
+    return typeof document !== 'undefined' && document.hidden ? bgAudioRef.current : audioRef.current;
+  }, []);
+
   const toggle = useCallback(async () => {
-    const audio = audioRef.current;
+    const audio = getActiveAudio();
     if (!audio) return;
     if (audioCtxRef.current?.state === 'suspended') {
       try {
@@ -226,7 +261,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
-  }, []);
+  }, [getActiveAudio]);
 
   const seek = useCallback((ratio: number) => {
     const audio = audioRef.current;
@@ -237,6 +272,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const setVolume = useCallback((value: number) => {
     setVolumeState(value);
     if (audioRef.current) audioRef.current.volume = value;
+    if (bgAudioRef.current) bgAudioRef.current.volume = value;
   }, []);
 
   const setEq = useCallback((band: Partial<EQBands>) => {
@@ -256,6 +292,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [setEq]
   );
 
+  // Foreground element: drives all visible UI state (progress bar, play/pause
+  // icon, duration) plus auto-advance when a track ends.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -263,17 +301,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const onPause = () => setIsPlaying(false);
     const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
     const onLoaded = () => setDuration(audio.duration || 0);
-    const onEnded = () => {
-      const q = queueRef.current;
-      const i = queueIndexRef.current;
-      if (i + 1 < q.length) {
-        const idx = i + 1;
-        setQueueIndex(idx);
-        playTrack(q[idx]);
-      } else {
-        setIsPlaying(false);
-      }
-    };
+    const onEnded = () => advanceOnEnded();
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('timeupdate', onTime);
@@ -286,19 +314,154 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [playTrack]);
+  }, [advanceOnEnded]);
 
-  // Extra safety net for iOS: whenever the tab/page becomes visible again
-  // (unlocking the screen, switching back from another app), or the window
-  // regains focus, immediately try to resume the Web Audio graph if it was
-  // supposed to be playing but got suspended by the OS in the meantime.
+  // Background element: only needs to auto-advance to the next track when
+  // one finishes while the screen is locked — nothing in the UI is visible
+  // to update anyway.
+  useEffect(() => {
+    const bg = bgAudioRef.current;
+    if (!bg) return;
+    const onEnded = () => advanceOnEnded();
+    bg.addEventListener('ended', onEnded);
+    return () => bg.removeEventListener('ended', onEnded);
+  }, [advanceOnEnded]);
+
+  // The actual lock-screen fix: hand playback off between the two elements
+  // as the page hides/shows, instead of trying to keep the Web Audio graph
+  // alive through a lock (which iOS won't allow).
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    const resumeIfNeeded = () => {
-      const ctx = audioCtxRef.current;
-      const audio = audioRef.current;
-      if (ctx && ctx.state === 'suspended' && audio && !audio.paused) {
-        ctx.resume().catch(() => {});
-      }
+
+    const goBackground = () => {
+      const fg = audioRef.current;
+      const bg = bgAudioRef.current;
+      if (!fg || !bg || fg.paused || !currentIdRef.current) return;
+      bg.src = fg.src;
+      bg.currentTime = fg.currentTime;
+      bg.volume = fg.volume;
+      fg.pause();
+      bg.play().catch(() => {});
     };
-    document.addEventListener('visi
+
+    const goForeground = () => {
+      const fg = audioRef.current;
+      const bg = bgAudioRef.current;
+      if (!fg || !bg || bg.paused) return;
+      if (fg.src !== bg.src) {
+        fg.src = bg.src;
+      }
+      fg.currentTime = bg.currentTime;
+      bg.pause();
+      audioCtxRef.current?.resume().catch(() => {});
+      fg.play().catch(() => {});
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) goBackground();
+      else goForeground();
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pageshow', goForeground);
+    window.addEventListener('focus', goForeground);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pageshow', goForeground);
+      window.removeEventListener('focus', goForeground);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !current) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: current.title,
+      artist: current.artist,
+      artwork: current.coverUrl
+        ? [
+            { src: current.coverUrl, sizes: '96x96', type: 'image/png' },
+            { src: current.coverUrl, sizes: '256x256', type: 'image/png' },
+            { src: current.coverUrl, sizes: '512x512', type: 'image/png' },
+          ]
+        : [],
+    });
+  }, [current]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      audioCtxRef.current?.resume().catch(() => {});
+      getActiveAudio()?.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      getActiveAudio()?.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      const audio = getActiveAudio();
+      if (audio && details.seekTime != null) {
+        audio.currentTime = details.seekTime;
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      const audio = getActiveAudio();
+      if (audio) audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      const audio = getActiveAudio();
+      if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      next();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      previous();
+    });
+
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekto', null);
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+    };
+  }, [next, previous, getActiveAudio]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  return (
+    <PlayerContext.Provider
+      value={{
+        current,
+        isPlaying,
+        progress,
+        duration,
+        volume,
+        analyser: analyserNode,
+        eq,
+        setEq,
+        applyPreset,
+        play,
+        playQueue,
+        next,
+        previous,
+        hasNext: queueIndex + 1 < queue.length,
+        hasPrevious: queueIndex > 0,
+        toggle,
+        seek,
+        setVolume,
+        playerBarHeight,
+        setPlayerBarHeight,
+      }}
+    >
+      {children}
+      <audio ref={audioRef} preload="metadata" />
+      <audio ref={bgAudioRef} preload="none" />
+    </PlayerContext.Provider>
+  );
+}
