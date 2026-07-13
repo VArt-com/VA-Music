@@ -16,6 +16,7 @@ const he: Dictionary = {
     whatsapp: 'לכתוב בוואטסאפ',
     installApp: 'התקנה',
     installIosTip: 'הקישו על סמל השיתוף בתחתית המסך, ואז בחרו "הוספה למסך הבית".',
+    offline: 'אופליין',
   },
   footer: {
     freeNotice: 'כל המוזיקה בפלטפורמה חינמית להאזנה ולהורדה.',
@@ -52,6 +53,9 @@ const he: Dictionary = {
     copyLink: 'העתקת קישור',
     unknownArtist: 'אמן לא ידוע',
     addToPlaylist: 'הוספה לפלייליסט',
+    downloadOffline: 'שמירה לאופליין',
+    removeOffline: 'הסרת עותק אופליין',
+    downloadingOffline: 'מוריד...',
   },
   home: {
     title: 'מוזיקה חדשה',
@@ -155,6 +159,11 @@ const he: Dictionary = {
     descriptionPlaceholder: 'תיאור',
     creating: 'יוצר...',
     create: 'יצירה',
+  },
+  offlinePage: {
+    title: 'רצועות אופליין',
+    subtitle: 'רצועות ששמורות במכשיר — מתנגנות גם בלי אינטרנט.',
+    empty: 'אין עדיין רצועות שמורות. הקישו על 📴 בכל רצועה כדי לשמור אותה להאזנה ללא אינטרנט.',
   },
 };
 
