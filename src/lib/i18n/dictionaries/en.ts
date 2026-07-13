@@ -16,6 +16,7 @@ const en: Dictionary = {
     whatsapp: 'Message on WhatsApp',
     installApp: 'Install',
     installIosTip: 'Tap the Share icon at the bottom of the screen, then choose "Add to Home Screen".',
+    offline: 'Offline',
   },
   footer: {
     freeNotice: 'All music on the platform is free to listen to and download.',
@@ -52,6 +53,9 @@ const en: Dictionary = {
     copyLink: 'Copy link',
     unknownArtist: 'Unknown artist',
     addToPlaylist: 'Add to playlist',
+    downloadOffline: 'Save offline',
+    removeOffline: 'Remove offline copy',
+    downloadingOffline: 'Downloading...',
   },
   home: {
     title: 'Fresh music',
@@ -155,6 +159,11 @@ const en: Dictionary = {
     descriptionPlaceholder: 'Description',
     creating: 'Creating...',
     create: 'Create',
+  },
+  offlinePage: {
+    title: 'Offline tracks',
+    subtitle: 'Tracks saved on this device — play with no internet connection.',
+    empty: 'No offline tracks yet. Tap 📴 on any track to save it for offline listening.',
   },
 };
 
