@@ -148,6 +148,7 @@ const en: Dictionary = {
     empty: 'No playlists yet.',
     newPageTitle: 'New playlist',
     emptyTracks: 'This playlist has no tracks yet.',
+    removeFromPlaylist: 'Remove from playlist',
   },
   createPlaylistForm: {
     namePlaceholder: 'Playlist name',
