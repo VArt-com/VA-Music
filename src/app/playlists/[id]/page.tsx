@@ -15,6 +15,8 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
   const { data: playlist } = await supabase.from('playlists').select('*, profiles(*)').eq('id', id).single();
   if (!playlist) notFound();
 
+  const isOwner = Boolean(user && user.id === (playlist as Playlist).owner_id);
+
   const { data: items } = await supabase
     .from('playlist_tracks')
     .select('position, tracks(*, profiles(*))')
@@ -44,6 +46,8 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
               coverUrl={coverUrl}
               currentUserId={user?.id ?? null}
               sharePath={`/track/${track.id}`}
+              playlistId={id}
+              canRemoveFromPlaylist={isOwner}
             />
           );
         })}
