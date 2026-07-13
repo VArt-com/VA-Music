@@ -148,6 +148,7 @@ const ar: Dictionary = {
     empty: 'لا توجد قوائم تشغيل بعد.',
     newPageTitle: 'قائمة تشغيل جديدة',
     emptyTracks: 'لا توجد مقطوعات في هذه القائمة بعد.',
+    removeFromPlaylist: 'إزالة من قائمة التشغيل',
   },
   createPlaylistForm: {
     namePlaceholder: 'اسم قائمة التشغيل',
