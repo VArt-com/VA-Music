@@ -109,10 +109,7 @@ export default function TrackCard({
         <AddToPlaylistButton trackId={track.id} userId={currentUserId} />
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
         
-          href={downloadUrl}
-          onClick={handleDownload}
-          className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition"
-        >
+          <a href={downloadUrl} onClick={handleDownload} className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition">
           {t.common.download}
         </a>
         {isOwner && <DeleteButton onDelete={handleDelete} />}
