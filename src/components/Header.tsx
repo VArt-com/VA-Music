@@ -33,6 +33,9 @@ export default async function Header() {
           <Link href="/mixer" className="text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.mixer}
           </Link>
+          <Link href="/offline" className="text-white/80 hover:text-fuchsia-300 transition">
+            {t.nav.offline}
+          </Link>
           {user ? (
             <>
               <Link href="/upload" className="text-white/80 hover:text-fuchsia-300 transition">
