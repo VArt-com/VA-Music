@@ -16,6 +16,7 @@ const ru: Dictionary = {
     whatsapp: 'Написать в WhatsApp',
     installApp: 'Установить',
     installIosTip: 'Нажми на иконку «Поделиться» внизу экрана, затем выбери «На экран «Домой»».',
+    offline: 'Офлайн',
   },
   footer: {
     freeNotice: 'Вся музыка на платформе — бесплатно для прослушивания и скачивания.',
@@ -52,6 +53,9 @@ const ru: Dictionary = {
     copyLink: 'Скопировать ссылку',
     unknownArtist: 'Неизвестный артист',
     addToPlaylist: 'Добавить в плейлист',
+    downloadOffline: 'Скачать офлайн',
+    removeOffline: 'Удалить офлайн-копию',
+    downloadingOffline: 'Скачиваю...',
   },
   home: {
     title: 'Свежая музыка',
@@ -158,6 +162,11 @@ const ru: Dictionary = {
     descriptionPlaceholder: 'Описание',
     creating: 'Создаю...',
     create: 'Создать',
+  },
+  offlinePage: {
+    title: 'Офлайн-треки',
+    subtitle: 'Треки, сохранённые на телефон — играют без интернета.',
+    empty: 'Пока нет сохранённых треков. Нажми 📴 у любого трека, чтобы сохранить его для прослушивания без интернета.',
   },
 };
 
