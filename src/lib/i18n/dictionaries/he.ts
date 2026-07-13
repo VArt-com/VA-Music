@@ -148,6 +148,7 @@ const he: Dictionary = {
     empty: 'אין עדיין פלייליסטים.',
     newPageTitle: 'פלייליסט חדש',
     emptyTracks: 'אין עדיין רצועות בפלייליסט הזה.',
+    removeFromPlaylist: 'הסרה מהפלייליסט',
   },
   createPlaylistForm: {
     namePlaceholder: 'שם הפלייליסט',
