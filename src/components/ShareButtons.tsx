@@ -73,13 +73,7 @@ export default function ShareButtons({
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 z-20 w-52 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl p-2 shadow-neon space-y-0.5">
             {links.map((l) => (
-              
-                key={l.name}
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition"
-              >
+              <a key={l.name} href={l.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition">
                 <span className="w-4 text-center">{l.icon}</span> {l.name}
               </a>
             ))}
