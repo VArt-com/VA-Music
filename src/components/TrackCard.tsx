@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n/I18nProvider';
 import DeleteButton from './DeleteButton';
 import ShareButtons from './ShareButtons';
 import AddToPlaylistButton from './AddToPlaylistButton';
+import OfflineDownloadButton from './OfflineDownloadButton';
 
 export default function TrackCard({
   track,
@@ -37,6 +38,7 @@ export default function TrackCard({
   const { t } = useI18n();
   const isCurrent = current?.id === track.id;
   const isOwner = Boolean(currentUserId && currentUserId === track.artist_id);
+  const artistName = track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist;
 
   const handlePlay = () => {
     if (isCurrent) {
@@ -51,7 +53,7 @@ export default function TrackCard({
       play({
         id: track.id,
         title: track.title,
-        artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
+        artist: artistName,
         artistId: track.artist_id,
         audioUrl,
         coverUrl,
@@ -123,6 +125,14 @@ export default function TrackCard({
 
       <div className="flex items-center gap-2 shrink-0">
         <AddToPlaylistButton trackId={track.id} userId={currentUserId} />
+        <OfflineDownloadButton
+          trackId={track.id}
+          title={track.title}
+          artist={artistName}
+          artistId={track.artist_id}
+          coverUrl={coverUrl}
+          audioUrl={audioUrl}
+        />
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
         <a href={downloadUrl} onClick={handleDownload} className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition">
           {t.common.download}
