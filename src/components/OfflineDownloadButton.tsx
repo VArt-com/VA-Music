@@ -1,201 +1,89 @@
-// Storage layer for offline-downloaded tracks. Audio (and cover) files are
-// fetched once and stored as real Blobs in IndexedDB, so playback later
-// reads straight from local disk via a blob: URL — no network involved at
-// all. This is deliberately NOT built on the Cache API / service worker
-// fetch interception, because iOS Safari has a long history of not routing
-// <audio>/<video> range requests through a service worker's fetch handler,
-// which would make offline playback unreliable on iPhone specifically.
-// Blob URLs sidestep that entirely and work the same way on every platform.
+'use client';
 
-const DB_NAME = 'music-world-offline';
-const DB_VERSION = 1;
-const STORE = 'tracks';
+import { useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n/I18nProvider';
+import { saveOfflineTrack, removeOfflineTrack, isTrackOffline } from '@/lib/offline/db';
 
-export type OfflineTrackRecord = {
-  id: string;
-  title: string;
-  artist: string;
-  artistId: string;
-  coverUrl: string | null;
-  audioBlob: Blob;
-  coverBlob: Blob | null;
-  savedAt: number;
-};
+type Status = 'checking' | 'idle' | 'downloading' | 'saved' | 'removing';
 
-export type OfflineTrackMeta = Omit<OfflineTrackRecord, 'audioBlob' | 'coverBlob'>;
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') {
-      reject(new Error('IndexedDB not available'));
-      return;
-    }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function saveOfflineTrack(input: {
-  id: string;
+export default function OfflineDownloadButton({
+  trackId,
+  title,
+  artist,
+  artistId,
+  coverUrl,
+  audioUrl,
+}: {
+  trackId: string;
   title: string;
   artist: string;
   artistId: string;
   coverUrl: string | null;
   audioUrl: string;
-}): Promise<void> {
-  const audioRes = await fetch(input.audioUrl);
-  if (!audioRes.ok) throw new Error('Failed to fetch audio for offline download');
-  const audioBlob = await audioRes.blob();
+}) {
+  const { t } = useI18n();
+  const [status, setStatus] = useState<Status>('checking');
 
-  let coverBlob: Blob | null = null;
-  if (input.coverUrl) {
-    try {
-      const coverRes = await fetch(input.coverUrl);
-      if (coverRes.ok) coverBlob = await coverRes.blob();
-    } catch {
-      // Cover art is a nice-to-have offline — skip silently if it fails.
+  useEffect(() => {
+    let cancelled = false;
+    isTrackOffline(trackId).then((offline) => {
+      if (!cancelled) setStatus(offline ? 'saved' : 'idle');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trackId]);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (status === 'saved') {
+      setStatus('removing');
+      try {
+        await removeOfflineTrack(trackId);
+        setStatus('idle');
+      } catch {
+        setStatus('saved');
+      }
+      return;
     }
-  }
 
-  const record: OfflineTrackRecord = {
-    id: input.id,
-    title: input.title,
-    artist: input.artist,
-    artistId: input.artistId,
-    coverUrl: input.coverUrl,
-    audioBlob,
-    coverBlob,
-    savedAt: Date.now(),
+    if (status !== 'idle') return;
+    setStatus('downloading');
+    try {
+      await saveOfflineTrack({ id: trackId, title, artist, artistId, coverUrl, audioUrl });
+      setStatus('saved');
+    } catch {
+      setStatus('idle');
+    }
   };
 
-  const db = await openDb();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(record);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
-}
+  if (status === 'checking') return null;
 
-export async function removeOfflineTrack(id: string): Promise<void> {
-  const db = await openDb();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
-  revokeObjectUrls(id);
-}
+  const label =
+    status === 'saved'
+      ? t.common.removeOffline
+      : status === 'downloading'
+        ? t.common.downloadingOffline
+        : status === 'removing'
+          ? t.common.deleting
+          : t.common.downloadOffline;
 
-export async function isTrackOffline(id: string): Promise<boolean> {
-  try {
-    const db = await openDb();
-    const result = await new Promise<boolean>((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).getKey(id);
-      req.onsuccess = () => resolve(req.result !== undefined);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    return result;
-  } catch {
-    return false;
-  }
-}
-
-export async function getAllOfflineTracks(): Promise<OfflineTrackMeta[]> {
-  try {
-    const db = await openDb();
-    const records = await new Promise<OfflineTrackRecord[]>((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).getAll();
-      req.onsuccess = () => resolve(req.result as OfflineTrackRecord[]);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    return records
-      .sort((a, b) => b.savedAt - a.savedAt)
-      .map(({ audioBlob, coverBlob, ...meta }) => {
-        void audioBlob;
-        void coverBlob;
-        return meta;
-      });
-  } catch {
-    return [];
-  }
-}
-
-// Object URLs are created once per track id and reused, so we don't leak
-// memory by minting a fresh blob URL every time a track is looked up.
-const objectUrlCache = new Map<string, string>();
-
-function revokeObjectUrls(id: string) {
-  const audioUrl = objectUrlCache.get(id);
-  if (audioUrl) {
-    URL.revokeObjectURL(audioUrl);
-    objectUrlCache.delete(id);
-  }
-  const coverKey = `${id}:cover`;
-  const coverUrl = objectUrlCache.get(coverKey);
-  if (coverUrl) {
-    URL.revokeObjectURL(coverUrl);
-    objectUrlCache.delete(coverKey);
-  }
-}
-
-export async function getOfflineAudioUrl(id: string): Promise<string | null> {
-  const cached = objectUrlCache.get(id);
-  if (cached) return cached;
-
-  try {
-    const db = await openDb();
-    const record = await new Promise<OfflineTrackRecord | undefined>((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).get(id);
-      req.onsuccess = () => resolve(req.result as OfflineTrackRecord | undefined);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    if (!record) return null;
-
-    const url = URL.createObjectURL(record.audioBlob);
-    objectUrlCache.set(id, url);
-    return url;
-  } catch {
-    return null;
-  }
-}
-
-export async function getOfflineCoverUrl(id: string): Promise<string | null> {
-  const cacheKey = `${id}:cover`;
-  const cached = objectUrlCache.get(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const db = await openDb();
-    const record = await new Promise<OfflineTrackRecord | undefined>((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).get(id);
-      req.onsuccess = () => resolve(req.result as OfflineTrackRecord | undefined);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    if (!record || !record.coverBlob) return null;
-
-    const url = URL.createObjectURL(record.coverBlob);
-    objectUrlCache.set(cacheKey, url);
-    return url;
-  } catch {
-    return null;
-  }
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={status === 'downloading' || status === 'removing'}
+      title={label}
+      aria-label={label}
+      className={`shrink-0 text-xs rounded-full px-2.5 py-1.5 border whitespace-nowrap transition ${
+        status === 'saved'
+          ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+          : 'bg-white/10 border-white/10 hover:bg-fuchsia-500/20 hover:border-fuchsia-400/40'
+      } ${status === 'downloading' || status === 'removing' ? 'opacity-60' : ''}`}
+    >
+      {status === 'downloading' || status === 'removing' ? '⏳' : status === 'saved' ? '✓ 📴' : '📴'}
+    </button>
+  );
 }
