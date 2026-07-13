@@ -16,6 +16,7 @@ const ar: Dictionary = {
     whatsapp: 'راسلني عبر واتساب',
     installApp: 'تثبيت',
     installIosTip: 'اضغط على أيقونة المشاركة أسفل الشاشة، ثم اختر "إضافة إلى الشاشة الرئيسية".',
+    offline: 'بدون إنترنت',
   },
   footer: {
     freeNotice: 'كل الموسيقى على المنصة مجانية للاستماع والتحميل.',
@@ -52,6 +53,9 @@ const ar: Dictionary = {
     copyLink: 'نسخ الرابط',
     unknownArtist: 'فنان غير معروف',
     addToPlaylist: 'أضف إلى قائمة التشغيل',
+    downloadOffline: 'حفظ للاستماع دون إنترنت',
+    removeOffline: 'إزالة النسخة المحفوظة',
+    downloadingOffline: 'جارٍ التحميل...',
   },
   home: {
     title: 'موسيقى جديدة',
@@ -155,6 +159,11 @@ const ar: Dictionary = {
     descriptionPlaceholder: 'الوصف',
     creating: 'جارٍ الإنشاء...',
     create: 'إنشاء',
+  },
+  offlinePage: {
+    title: 'المقطوعات المحفوظة',
+    subtitle: 'مقطوعات محفوظة على الجهاز — تعمل بدون اتصال بالإنترنت.',
+    empty: 'لا توجد مقطوعات محفوظة بعد. اضغط على 📴 بجانب أي مقطوعة لحفظها للاستماع بدون إنترنت.',
   },
 };
 
