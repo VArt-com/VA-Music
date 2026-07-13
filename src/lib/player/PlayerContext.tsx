@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { getOfflineAudioUrl } from '@/lib/offline/db';
 
 // iOS Safari (in a plain tab or as a home-screen app) does not reliably keep
 // the fg/bg audio-element handoff alive across a real screen lock — the
@@ -197,13 +198,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // lock-screen next/previous/auto-advance.
   const playTrack = useCallback(
     async (track: NowPlaying) => {
+      // If this track was downloaded for offline listening, play the local
+      // copy stored in IndexedDB instead of hitting the network — this is
+      // what makes playback actually work with no internet connection.
+      let src = track.audioUrl;
+      try {
+        const offlineUrl = await getOfflineAudioUrl(track.id);
+        if (offlineUrl) src = offlineUrl;
+      } catch {
+        // IndexedDB unavailable or lookup failed — fall back to the network URL.
+      }
+
       if (isIOS()) {
         // No graph, no fg/bg swap — just the plain element, always. This is
         // the one thing that reliably survives a real iOS lock screen.
         const audio = audioRef.current;
         if (!audio) return;
-        if (currentIdRef.current !== track.id || audio.src !== track.audioUrl) {
-          audio.src = track.audioUrl;
+        if (currentIdRef.current !== track.id || audio.src !== src) {
+          audio.src = src;
           currentIdRef.current = track.id;
         }
         setCurrent(track);
@@ -242,8 +254,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (currentIdRef.current !== track.id || audio.src !== track.audioUrl) {
-        audio.src = track.audioUrl;
+      if (currentIdRef.current !== track.id || audio.src !== src) {
+        audio.src = src;
         currentIdRef.current = track.id;
       }
       setCurrent(track);
