@@ -115,6 +115,25 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queueIndexRef.current = queueIndex;
   }, [queueIndex]);
 
+  // Warm the browser's HTTP cache for the neighbouring tracks in the queue.
+  // Switching tracks always has to reset the <audio> element's src, which
+  // briefly drops it out of "ready" state — that's what makes a lock-screen
+  // widget (Android in particular) flicker off and back on around a track
+  // change. If the next/previous file is already sitting in cache, the swap
+  // resolves near-instantly instead of waiting on the network, which shrinks
+  // that gap a lot even if it can't be removed completely from a website.
+  const prefetchedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const neighbours = [queue[queueIndex + 1], queue[queueIndex - 1]].filter(
+      (t): t is NowPlaying => Boolean(t)
+    );
+    neighbours.forEach((t) => {
+      if (prefetchedRef.current.has(t.audioUrl)) return;
+      prefetchedRef.current.add(t.audioUrl);
+      fetch(t.audioUrl, { cache: 'force-cache' }).catch(() => {});
+    });
+  }, [queue, queueIndex]);
+
   const ensureGraph = useCallback(() => {
     if (isIOS() || audioCtxRef.current || !audioRef.current) return;
     try {
