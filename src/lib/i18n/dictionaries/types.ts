@@ -16,6 +16,7 @@ export type Dictionary = {
     whatsapp: string;
     installApp: string;
     installIosTip: string;
+    offline: string;
   };
   footer: {
     freeNotice: string;
@@ -56,6 +57,9 @@ export type Dictionary = {
     copyLink: string;
     unknownArtist: string;
     addToPlaylist: string;
+    downloadOffline: string;
+    removeOffline: string;
+    downloadingOffline: string;
   };
   home: {
     title: string;
@@ -158,5 +162,10 @@ export type Dictionary = {
     descriptionPlaceholder: string;
     creating: string;
     create: string;
+  };
+  offlinePage: {
+    title: string;
+    subtitle: string;
+    empty: string;
   };
 };
