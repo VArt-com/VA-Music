@@ -151,6 +151,7 @@ export type Dictionary = {
     empty: string;
     newPageTitle: string;
     emptyTracks: string;
+    removeFromPlaylist: string;
   };
   createPlaylistForm: {
     namePlaceholder: string;
