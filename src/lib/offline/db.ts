@@ -1,97 +1,201 @@
-// Service worker for Music World.
-//
-// Two jobs:
-// 1. Satisfy the PWA installability requirement (a registered SW with a
-//    fetch handler) so "Add to Home Screen" / the install prompt works.
-// 2. Actually cache the app shell (pages + JS/CSS/image assets from this
-//    same origin) as they're visited, so the app can still OPEN with no
-//    internet connection after at least one successful visit.
-//
-// This deliberately does NOT cache audio files or anything cross-origin
-// (e.g. Supabase storage). Tracks the user explicitly downloads for offline
-// listening are handled separately, in IndexedDB, by src/lib/offline/db.ts
-// — that approach works reliably on iOS Safari, where service-worker-
-// intercepted <audio> range requests historically have not.
+// Storage layer for offline-downloaded tracks. Audio (and cover) files are
+// fetched once and stored as real Blobs in IndexedDB, so playback later
+// reads straight from local disk via a blob: URL — no network involved at
+// all. This is deliberately NOT built on the Cache API / service worker
+// fetch interception, because iOS Safari has a long history of not routing
+// <audio>/<video> range requests through a service worker's fetch handler,
+// which would make offline playback unreliable on iPhone specifically.
+// Blob URLs sidestep that entirely and work the same way on every platform.
 
-const CACHE_NAME = 'music-world-shell-v2';
+const DB_NAME = 'music-world-offline';
+const DB_VERSION = 1;
+const STORE = 'tracks';
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
-});
+export type OfflineTrackRecord = {
+  id: string;
+  title: string;
+  artist: string;
+  artistId: string;
+  coverUrl: string | null;
+  audioBlob: Blob;
+  coverBlob: Blob | null;
+  savedAt: number;
+};
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const names = await caches.keys();
-      await Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)));
-      await self.clients.claim();
-    })()
-  );
-});
+export type OfflineTrackMeta = Omit<OfflineTrackRecord, 'audioBlob' | 'coverBlob'>;
 
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-
-  // Only ever cache same-origin GET requests. Everything else (audio files,
-  // Supabase API calls, POST requests, etc.) goes straight to the network,
-  // exactly like before.
-  let url;
-  try {
-    url = new URL(request.url);
-  } catch {
-    return;
-  }
-  if (request.method !== 'GET' || url.origin !== self.location.origin) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  if (request.mode === 'navigate') {
-    // Page loads: prefer a fresh page from the network, but fall back to
-    // whatever we have cached (this exact page, or failing that the home
-    // page shell) when there's no connection at all.
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(request);
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(request, fresh.clone());
-          return fresh;
-        } catch {
-          const cache = await caches.open(CACHE_NAME);
-          const cached = await cache.match(request);
-          if (cached) return cached;
-          const home = await cache.match('/');
-          if (home) return home;
-          return Response.error();
-        }
-      })()
-    );
-    return;
-  }
-
-  // Static assets (JS/CSS/images/fonts from this site): serve from cache
-  // instantly if we have it, and refresh the cache in the background so the
-  // next visit gets the latest build. If it isn't cached yet, fetch it and
-  // store a copy for next time.
-  event.respondWith(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-      const networkFetch = fetch(request)
-        .then((response) => {
-          if (response && response.ok) cache.put(request, response.clone());
-          return response;
-        })
-        .catch(() => null);
-
-      if (cached) {
-        networkFetch.catch(() => {});
-        return cached;
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB not available'));
+      return;
+    }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'id' });
       }
-      const fresh = await networkFetch;
-      if (fresh) return fresh;
-      return Response.error();
-    })()
-  );
-});
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function saveOfflineTrack(input: {
+  id: string;
+  title: string;
+  artist: string;
+  artistId: string;
+  coverUrl: string | null;
+  audioUrl: string;
+}): Promise<void> {
+  const audioRes = await fetch(input.audioUrl);
+  if (!audioRes.ok) throw new Error('Failed to fetch audio for offline download');
+  const audioBlob = await audioRes.blob();
+
+  let coverBlob: Blob | null = null;
+  if (input.coverUrl) {
+    try {
+      const coverRes = await fetch(input.coverUrl);
+      if (coverRes.ok) coverBlob = await coverRes.blob();
+    } catch {
+      // Cover art is a nice-to-have offline — skip silently if it fails.
+    }
+  }
+
+  const record: OfflineTrackRecord = {
+    id: input.id,
+    title: input.title,
+    artist: input.artist,
+    artistId: input.artistId,
+    coverUrl: input.coverUrl,
+    audioBlob,
+    coverBlob,
+    savedAt: Date.now(),
+  };
+
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function removeOfflineTrack(id: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+  revokeObjectUrls(id);
+}
+
+export async function isTrackOffline(id: string): Promise<boolean> {
+  try {
+    const db = await openDb();
+    const result = await new Promise<boolean>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).getKey(id);
+      req.onsuccess = () => resolve(req.result !== undefined);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return result;
+  } catch {
+    return false;
+  }
+}
+
+export async function getAllOfflineTracks(): Promise<OfflineTrackMeta[]> {
+  try {
+    const db = await openDb();
+    const records = await new Promise<OfflineTrackRecord[]>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result as OfflineTrackRecord[]);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return records
+      .sort((a, b) => b.savedAt - a.savedAt)
+      .map(({ audioBlob, coverBlob, ...meta }) => {
+        void audioBlob;
+        void coverBlob;
+        return meta;
+      });
+  } catch {
+    return [];
+  }
+}
+
+// Object URLs are created once per track id and reused, so we don't leak
+// memory by minting a fresh blob URL every time a track is looked up.
+const objectUrlCache = new Map<string, string>();
+
+function revokeObjectUrls(id: string) {
+  const audioUrl = objectUrlCache.get(id);
+  if (audioUrl) {
+    URL.revokeObjectURL(audioUrl);
+    objectUrlCache.delete(id);
+  }
+  const coverKey = `${id}:cover`;
+  const coverUrl = objectUrlCache.get(coverKey);
+  if (coverUrl) {
+    URL.revokeObjectURL(coverUrl);
+    objectUrlCache.delete(coverKey);
+  }
+}
+
+export async function getOfflineAudioUrl(id: string): Promise<string | null> {
+  const cached = objectUrlCache.get(id);
+  if (cached) return cached;
+
+  try {
+    const db = await openDb();
+    const record = await new Promise<OfflineTrackRecord | undefined>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(id);
+      req.onsuccess = () => resolve(req.result as OfflineTrackRecord | undefined);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    if (!record) return null;
+
+    const url = URL.createObjectURL(record.audioBlob);
+    objectUrlCache.set(id, url);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+export async function getOfflineCoverUrl(id: string): Promise<string | null> {
+  const cacheKey = `${id}:cover`;
+  const cached = objectUrlCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const db = await openDb();
+    const record = await new Promise<OfflineTrackRecord | undefined>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(id);
+      req.onsuccess = () => resolve(req.result as OfflineTrackRecord | undefined);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    if (!record || !record.coverBlob) return null;
+
+    const url = URL.createObjectURL(record.coverBlob);
+    objectUrlCache.set(cacheKey, url);
+    return url;
+  } catch {
+    return null;
+  }
+}
