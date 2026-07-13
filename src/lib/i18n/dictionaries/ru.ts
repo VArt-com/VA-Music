@@ -151,6 +151,7 @@ const ru: Dictionary = {
     empty: 'Пока нет плейлистов.',
     newPageTitle: 'Новый плейлист',
     emptyTracks: 'В этом плейлисте пока нет треков.',
+    removeFromPlaylist: 'Убрать из плейлиста',
   },
   createPlaylistForm: {
     namePlaceholder: 'Название плейлиста',
