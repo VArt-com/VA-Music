@@ -18,6 +18,8 @@ export default function TrackCard({
   sharePath,
   queue,
   queueIndex,
+  playlistId,
+  canRemoveFromPlaylist = false,
 }: {
   track: Track;
   audioUrl: string;
@@ -27,6 +29,9 @@ export default function TrackCard({
   sharePath?: string;
   queue?: NowPlaying[];
   queueIndex?: number;
+  /** When set, shows a "remove from playlist" button (does not delete the track itself). */
+  playlistId?: string;
+  canRemoveFromPlaylist?: boolean;
 }) {
   const { current, isPlaying, play, playQueue, toggle } = usePlayer();
   const { t } = useI18n();
@@ -69,6 +74,17 @@ export default function TrackCard({
     if (error) throw error;
   };
 
+  const handleRemoveFromPlaylist = async () => {
+    if (!playlistId) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('playlist_tracks')
+      .delete()
+      .eq('playlist_id', playlistId)
+      .eq('track_id', track.id);
+    if (error) throw error;
+  };
+
   return (
     <div className="group glass-card rounded-2xl p-4 flex items-center gap-4 hover:shadow-neon transition">
       <button
@@ -108,10 +124,12 @@ export default function TrackCard({
       <div className="flex items-center gap-2 shrink-0">
         <AddToPlaylistButton trackId={track.id} userId={currentUserId} />
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
-        
-          <a href={downloadUrl} onClick={handleDownload} className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition">
+        <a href={downloadUrl} onClick={handleDownload} className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition">
           {t.common.download}
         </a>
+        {playlistId && canRemoveFromPlaylist && (
+          <DeleteButton onDelete={handleRemoveFromPlaylist} label={t.playlists.removeFromPlaylist} />
+        )}
         {isOwner && <DeleteButton onDelete={handleDelete} />}
       </div>
     </div>
