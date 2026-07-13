@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function ShareButtons({
@@ -17,6 +18,13 @@ export default function ShareButtons({
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState(path);
   const [canNativeShare, setCanNativeShare] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -24,6 +32,28 @@ export default function ShareButtons({
       setCanNativeShare(typeof navigator.share === 'function');
     }
   }, [path]);
+
+  const reposition = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuWidth = 208; // w-52
+    setPos({
+      top: rect.bottom + 8,
+      left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    reposition();
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const encodedUrl = encodeURIComponent(url);
   const encodedTitle = encodeURIComponent(title);
@@ -62,31 +92,45 @@ export default function ShareButtons({
   return (
     <div className="relative inline-block">
       <button
+        ref={btnRef}
         type="button"
         onClick={handleShareClick}
         className={`text-xs ${compact ? 'px-3 py-1.5' : 'px-4 py-2'} bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full transition whitespace-nowrap`}
       >
         🔗 {t.common.share}
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 z-20 w-52 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl p-2 shadow-neon space-y-0.5">
-            {links.map((l) => (
-              <a key={l.name} href={l.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition">
-                <span className="w-4 text-center">{l.icon}</span> {l.name}
-              </a>
-            ))}
-            <button
-              type="button"
-              onClick={copyLink}
-              className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition"
+      {open &&
+        mounted &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+            <div
+              className="fixed z-[101] w-52 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl p-2 shadow-neon space-y-0.5"
+              style={{ top: pos.top, left: pos.left }}
             >
-              <span className="w-4 text-center">📋</span> {copied ? t.common.copied : t.common.copyLink}
-            </button>
-          </div>
-        </>
-      )}
+              {links.map((l) => (
+                <a
+                  key={l.name}
+                  href={l.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition"
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="w-4 text-center">{l.icon}</span> {l.name}
+                </a>
+              ))}
+              <button
+                type="button"
+                onClick={copyLink}
+                className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                <span className="w-4 text-center">📋</span> {copied ? t.common.copied : t.common.copyLink}
+              </button>
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }
