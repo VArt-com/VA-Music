@@ -433,14 +433,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         audio.currentTime = details.seekTime;
       }
     });
-    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-      const audio = getActiveAudio();
-      if (audio) audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
-    });
-    navigator.mediaSession.setActionHandler('seekforward', (details) => {
-      const audio = getActiveAudio();
-      if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
-    });
+    // On iOS, registering seekbackward/seekforward alongside nexttrack/previoustrack
+    // can cause the lock-screen Control Center to show the +/-10s seek buttons
+    // instead of the track-skip buttons. Skip them on iOS so prev/next reliably show.
+    if (!isIOS()) {
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const audio = getActiveAudio();
+        if (audio) audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const audio = getActiveAudio();
+        if (audio) audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset ?? 10));
+      });
+    } else {
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+    }
     navigator.mediaSession.setActionHandler('nexttrack', () => {
       next();
     });
