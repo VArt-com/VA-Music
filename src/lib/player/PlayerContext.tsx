@@ -2,6 +2,21 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
+// iOS Safari (in a plain tab or as a home-screen app) does not reliably keep
+// the fg/bg audio-element handoff alive across a real screen lock — the
+// handoff itself depends on a visibilitychange handler running at exactly
+// the right moment, and iOS can suspend JS before that finishes. The only
+// pattern that's actually proven reliable on iOS is: never route playback
+// through the Web Audio graph at all, just play a single plain <audio>
+// element from the start and lean on Media Session — the same thing Apple's
+// own examples do. So on iOS we skip the graph/handoff entirely and always
+// play straight out of audioRef. The tradeoff: the EQ has no audible effect
+// on iPhone/iPad. Android and desktop keep the full EQ + fg/bg handoff.
+function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
 export type NowPlaying = {
   id: string;
   title: string;
@@ -101,7 +116,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [queueIndex]);
 
   const ensureGraph = useCallback(() => {
-    if (audioCtxRef.current || !audioRef.current) return;
+    if (isIOS() || audioCtxRef.current || !audioRef.current) return;
     try {
       const AudioContextCtor: typeof AudioContext =
         window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -163,6 +178,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // lock-screen next/previous/auto-advance.
   const playTrack = useCallback(
     async (track: NowPlaying) => {
+      if (isIOS()) {
+        // No graph, no fg/bg swap — just the plain element, always. This is
+        // the one thing that reliably survives a real iOS lock screen.
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (currentIdRef.current !== track.id || audio.src !== track.audioUrl) {
+          audio.src = track.audioUrl;
+          currentIdRef.current = track.id;
+        }
+        setCurrent(track);
+        audio.play().catch(() => {});
+        return;
+      }
+
       const hidden = typeof document !== 'undefined' && document.hidden;
       const audio = hidden ? bgAudioRef.current : audioRef.current;
       const other = hidden ? audioRef.current : bgAudioRef.current;
@@ -246,6 +275,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [playTrack]);
 
   const getActiveAudio = useCallback(() => {
+    if (isIOS()) return audioRef.current;
     return typeof document !== 'undefined' && document.hidden ? bgAudioRef.current : audioRef.current;
   }, []);
 
@@ -331,7 +361,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // as the page hides/shows, instead of trying to keep the Web Audio graph
   // alive through a lock (which iOS won't allow).
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || isIOS()) return;
 
     const goBackground = () => {
       const fg = audioRef.current;
