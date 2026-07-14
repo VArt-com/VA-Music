@@ -11,6 +11,27 @@ const DB_NAME = 'music-world-offline';
 const DB_VERSION = 1;
 const STORE = 'tracks';
 
+// Ask the browser not to auto-evict this site's storage under disk pressure.
+// Without this, mobile browsers (Chrome on Android especially) can silently
+// clear IndexedDB data for sites that aren't "persisted" — which is exactly
+// what makes a downloaded track vanish after the app is closed and reopened.
+// Best-effort only: Safari/iOS does not expose navigator.storage.persist(),
+// so this cannot fully guarantee persistence there, but it does help on
+// Android/Chrome and is harmless everywhere else.
+let persistenceRequested = false;
+async function ensurePersistentStorage() {
+  if (persistenceRequested) return;
+  persistenceRequested = true;
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const already = (await navigator.storage.persisted?.()) ?? false;
+      if (!already) await navigator.storage.persist();
+    }
+  } catch {
+    // Best effort — not supported everywhere.
+  }
+}
+
 export type OfflineTrackRecord = {
   id: string;
   title: string;
@@ -50,6 +71,7 @@ export async function saveOfflineTrack(input: {
   coverUrl: string | null;
   audioUrl: string;
 }): Promise<void> {
+  await ensurePersistentStorage();
   const audioRes = await fetch(input.audioUrl);
   if (!audioRes.ok) throw new Error('Failed to fetch audio for offline download');
   const audioBlob = await audioRes.blob();
