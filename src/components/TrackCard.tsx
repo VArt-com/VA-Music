@@ -88,27 +88,39 @@ export default function TrackCard({
   };
 
   return (
-    <div className="group glass-card rounded-2xl p-4 flex items-center gap-4 hover:shadow-neon transition">
+    // Spotify-style flat list row instead of a boxed card: tighter padding,
+    // a thin divider instead of a full glass border, and a hover tint. The
+    // actions cluster gets its own scroll container with a percentage cap
+    // so on narrow phones it scrolls horizontally instead of wrapping onto
+    // a second line and colliding with the title/tags below it.
+    <div className="group flex items-center gap-3 py-2.5 px-2 rounded-lg border-b border-white/5 last:border-b-0 hover:bg-white/[0.04] transition">
       <button
         type="button"
         onClick={handlePlay}
-        className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-fuchsia-600 to-violet-600 flex items-center justify-center"
+        className="relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gradient-to-br from-fuchsia-600 to-violet-600 flex items-center justify-center"
         aria-label={isCurrent && isPlaying ? t.player.pause : t.player.play}
       >
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
         )}
-        <span className="relative z-10 text-white text-lg drop-shadow">
+        <span
+          className={`relative z-10 text-white text-sm drop-shadow transition-opacity ${
+            isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+        >
           {isCurrent && isPlaying ? '❚❚' : '▶'}
         </span>
       </button>
 
       <div className="min-w-0 flex-1">
-        <Link href={`/track/${track.id}`} className="font-semibold hover:text-fuchsia-300 truncate block">
+        <Link
+          href={`/track/${track.id}`}
+          className={`font-medium truncate block ${isCurrent ? 'text-fuchsia-300' : 'hover:text-fuchsia-300'}`}
+        >
           {track.title}
         </Link>
-        <div className="text-sm text-white/60 truncate">
+        <div className="text-xs sm:text-sm text-white/50 truncate">
           {track.profiles && (
             <Link href={`/artist/${track.artist_id}`} className="hover:text-fuchsia-300">
               {track.profiles.display_name || track.profiles.username}
@@ -116,14 +128,16 @@ export default function TrackCard({
           )}
           {track.genre && <span> · {track.genre}</span>}
         </div>
-        <div className="flex flex-wrap gap-3 mt-1 text-xs text-white/40">
+        {/* Play/download counts and tags add clutter on a narrow phone row —
+            keep them for tablet/desktop only. */}
+        <div className="hidden sm:flex flex-wrap gap-3 mt-1 text-xs text-white/40">
           <span>▶ {track.play_count}</span>
           <span>⬇ {track.download_count}</span>
           {track.tags?.length > 0 && <span>#{track.tags.join(' #')}</span>}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 max-w-[46%] sm:max-w-none overflow-x-auto">
         <AddToPlaylistButton trackId={track.id} userId={currentUserId} />
         <OfflineDownloadButton
           trackId={track.id}
@@ -134,7 +148,11 @@ export default function TrackCard({
           audioUrl={audioUrl}
         />
         {sharePath && <ShareButtons path={sharePath} title={track.title} compact />}
-        <a href={downloadUrl} onClick={handleDownload} className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition">
+        <a
+          href={downloadUrl}
+          onClick={handleDownload}
+          className="text-xs bg-white/10 hover:bg-fuchsia-500/20 border border-white/10 hover:border-fuchsia-400/40 rounded-full px-3 py-1.5 whitespace-nowrap transition"
+        >
           {t.common.download}
         </a>
         {playlistId && canRemoveFromPlaylist && (
