@@ -45,7 +45,7 @@ export default function PlayerBar() {
   return (
     <div
       ref={barRef}
-      className="fixed bottom-0 inset-x-0 z-50 border-t border-fuchsia-500/20 bg-black/80 backdrop-blur-xl animate-slide-up"
+      className="fixed inset-x-0 z-50 border-t border-fuchsia-500/20 bg-black/80 backdrop-blur-xl animate-slide-up bottom-[calc(4rem+env(safe-area-inset-bottom))] sm:bottom-0"
     >
       {showEq && (
         <div className="max-w-3xl mx-auto px-4 pt-3">
