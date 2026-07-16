@@ -21,6 +21,15 @@ body {
   background-attachment: fixed;
 }
 
+/* Reserve space at the bottom of the page for the fixed mobile tab bar
+   (BottomNav), which is always visible below the sm breakpoint. Without
+   this, the tab bar would sit on top of the Footer / page content. */
+@media (max-width: 639px) {
+  body {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
 a {
   transition: color 0.15s ease;
 }
