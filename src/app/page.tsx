@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getDictionary } from '@/lib/i18n/server';
 import TrackCard from '@/components/TrackCard';
+import TrackShelf from '@/components/TrackShelf';
 import type { Track } from '@/lib/types';
 import type { NowPlaying } from '@/lib/player/PlayerContext';
 
 const PAGE_SIZE = 50;
+const SHELF_SIZE = 10;
 
 export default async function HomePage({
   searchParams,
@@ -65,6 +67,11 @@ export default async function HomePage({
       };
     }) ?? [];
 
+  // Only show the big-cover shelf on the unfiltered first page — once
+  // someone is searching or paging through results it stops being "what's
+  // fresh" and should just be the plain list.
+  const showShelf = !q && page === 1;
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
       <div className="mb-8">
@@ -76,6 +83,9 @@ export default async function HomePage({
             .replace('{videos}', String(totalVideos ?? 0))}
         </p>
       </div>
+
+      {showShelf && <TrackShelf tracks={nowPlayingList.slice(0, SHELF_SIZE)} queue={nowPlayingList} />}
+
       <form className="mb-6" action="/">
         <input
           type="text"
