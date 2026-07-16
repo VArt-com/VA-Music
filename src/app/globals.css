@@ -19,6 +19,21 @@ body {
     radial-gradient(circle at 88% 0%, rgba(129, 140, 248, 0.16), transparent 45%),
     radial-gradient(circle at 50% 100%, rgba(56, 189, 248, 0.08), transparent 50%);
   background-attachment: fixed;
+  /* Inter (set as a CSS var on <html> in layout.tsx) instead of the browser
+     default sans — this alone is most of the "looks like a real app, not a
+     website" jump toward Spotify/Apple Music/YouTube Music. Falls back to
+     the OS system font for Hebrew/Arabic, which Inter doesn't cover. */
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Slightly tighter tracking on headings reads less "default browser text"
+   and closer to the tight, condensed headline style those apps use. */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
 }
 
 /* Reserve space at the bottom of the page for the fixed mobile tab bar
