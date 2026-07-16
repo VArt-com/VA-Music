@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -17,13 +18,21 @@ export const metadata: Metadata = {
   description: 'Загружай, слушай и скачивай музыку бесплатно. Поддержи артистов донатом.',
 };
 
+// Spotify/Apple Music/YouTube Music all lean on a clean, bold grotesque
+// sans-serif rather than the browser's default system font — Inter is the
+// closest well-supported equivalent. Self-hosted by Next.js at build time
+// (no runtime request to Google Fonts), exposed as a CSS variable so
+// globals.css can apply it site-wide with a sensible fallback stack for
+// Hebrew/Arabic locales, which Inter doesn't cover.
+const inter = Inter({ subsets: ['latin', 'cyrillic'], display: 'swap', variable: '--font-inter' });
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const dict = dictionaries[locale];
   const dir = isRtl(locale) ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} className={inter.variable}>
       <body>
         <I18nProvider locale={locale} dict={dict} dictionaries={dictionaries}>
           <PlayerProvider>
