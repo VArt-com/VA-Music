@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { getDictionary } from '@/lib/i18n/server';
 import LanguageSwitcher from './LanguageSwitcher';
 import WhatsAppIcon from './WhatsAppIcon';
-import InstallAppButton from './InstallAppButton';
 
 export default async function Header() {
   const supabase = await createClient();
@@ -21,20 +20,20 @@ export default async function Header() {
           🎵 {t.brand.name}
         </Link>
         <nav className="flex items-center gap-4 text-sm flex-wrap">
-          <Link href="/" className="text-white/80 hover:text-fuchsia-300 transition">
+          {/* These four are duplicated in the mobile bottom tab bar (BottomNav),
+              so they're hidden below the sm breakpoint to keep the header from
+              getting crowded on phones. Full nav still shows on tablet/desktop. */}
+          <Link href="/" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.tracks}
           </Link>
-          <Link href="/videos" className="text-white/80 hover:text-fuchsia-300 transition">
+          <Link href="/videos" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.videos}
           </Link>
-          <Link href="/playlists" className="text-white/80 hover:text-fuchsia-300 transition">
+          <Link href="/playlists" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.playlists}
           </Link>
-          <Link href="/mixer" className="text-white/80 hover:text-fuchsia-300 transition">
+          <Link href="/mixer" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.mixer}
-          </Link>
-          <Link href="/offline" className="text-white/80 hover:text-fuchsia-300 transition">
-            {t.nav.offline}
           </Link>
           {user ? (
             <>
@@ -77,7 +76,6 @@ export default async function Header() {
           >
             ☕ {t.nav.donate}
           </a>
-          <InstallAppButton label={t.nav.installApp} iosTip={t.nav.installIosTip} />
           <LanguageSwitcher />
         </nav>
       </div>
