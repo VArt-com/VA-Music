@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { Track } from '@/lib/types';
 import { usePlayer, type NowPlaying } from '@/lib/player/PlayerContext';
@@ -101,8 +102,9 @@ export default function TrackCard({
         aria-label={isCurrent && isPlaying ? t.player.pause : t.player.play}
       >
         {coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          // Resized/lazy-loaded by Next instead of downloading the
+          // full-size upload for a 44px thumbnail on every row.
+          <Image src={coverUrl} alt="" fill sizes="48px" className="object-cover" />
         )}
         <span
           className={`relative z-10 text-white text-sm drop-shadow transition-opacity ${
