@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { usePlayer, type NowPlaying } from '@/lib/player/PlayerContext';
 
 // Spotify-style horizontal "shelf" of big square cover art — sits above the
@@ -31,8 +32,7 @@ export default function TrackShelf({ tracks, queue }: { tracks: NowPlaying[]; qu
           >
             <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-fuchsia-600 to-violet-600 shadow-neon-sm">
               {track.coverUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={track.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <Image src={track.coverUrl} alt="" fill sizes="128px" className="object-cover" />
               )}
               <div
                 className={`absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity ${
