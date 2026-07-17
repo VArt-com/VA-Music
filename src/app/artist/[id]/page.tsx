@@ -16,10 +16,13 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', id).single();
   if (!profile) notFound();
 
-  const [{ data: tracks }, { data: videos }] = await Promise.all([
+  const [{ data: tracks }, { data: videos }, { data: myLikes }] = await Promise.all([
     supabase.from('tracks').select('*, profiles(*)').eq('artist_id', id).order('created_at', { ascending: false }),
     supabase.from('videos').select('*, profiles(*)').eq('artist_id', id).order('created_at', { ascending: false }),
+    user ? supabase.from('track_likes').select('track_id').eq('user_id', user.id) : Promise.resolve({ data: null }),
   ]);
+
+  const likedTrackIds = new Set((myLikes ?? []).map((l) => l.track_id as string));
 
   const currentUserId = user?.id ?? null;
 
@@ -49,6 +52,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
               coverUrl={coverUrl}
               currentUserId={currentUserId}
               sharePath={`/track/${track.id}`}
+              likedByMe={likedTrackIds.has(track.id)}
             />
           );
         })}
