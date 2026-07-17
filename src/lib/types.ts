@@ -19,6 +19,8 @@ export type Track = {
   duration_seconds: number | null;
   play_count: number;
   download_count: number;
+  like_count: number;
+  share_count: number;
   created_at: string;
   profiles?: Profile;
 };
