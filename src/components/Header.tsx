@@ -20,7 +20,7 @@ export default async function Header() {
           🎵 {t.brand.name}
         </Link>
         <nav className="flex items-center gap-4 text-sm flex-wrap">
-          {/* These four are duplicated in the mobile bottom tab bar (BottomNav),
+          {/* These five are duplicated in the mobile bottom tab bar (BottomNav),
               so they're hidden below the sm breakpoint to keep the header from
               getting crowded on phones. Full nav still shows on tablet/desktop. */}
           <Link href="/" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
@@ -34,6 +34,9 @@ export default async function Header() {
           </Link>
           <Link href="/mixer" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
             {t.nav.mixer}
+          </Link>
+          <Link href="/offline" className="hidden sm:inline text-white/80 hover:text-fuchsia-300 transition">
+            {t.nav.offline}
           </Link>
           {user ? (
             <>
@@ -58,7 +61,7 @@ export default async function Header() {
             </>
           )}
           {whatsappNumber && (
-            <a
+            
               href={`https://wa.me/${whatsappNumber}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -68,7 +71,7 @@ export default async function Header() {
               <WhatsAppIcon className="w-5 h-5" />
             </a>
           )}
-          <a
+          
             href={kofi}
             target="_blank"
             rel="noopener noreferrer"
