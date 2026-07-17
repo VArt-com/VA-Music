@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '@/lib/player/PlayerContext';
 
 const BAR_COUNT = 24;
@@ -99,6 +99,24 @@ function PrismOrb({ wrapRef, barRef, coreRef, haloRef, isPlaying }: OrbHandles) 
 export default function AmbientVisualizer() {
   const { analyser, isPlaying } = usePlayer();
 
+  // The orbs render with `hidden xl:block` below, so on anything narrower
+  // than 1280px (i.e. basically every phone and most tablets) they were
+  // never visible at all — but the requestAnimationFrame loop used to run
+  // regardless, forever, on every single page, just to update transforms on
+  // elements nobody could see. That's exactly the kind of constant
+  // background main-thread work that makes buttons feel slow to respond and
+  // pages feel sluggish, especially on phones. This flag gates the loop so
+  // it only ever runs when the orbs can actually be seen.
+  const [wideEnough, setWideEnough] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1280px)');
+    setWideEnough(mql.matches);
+    const onChange = () => setWideEnough(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
   const leftBarRefs = useRef<(HTMLDivElement | null)[]>([]);
   const leftCoreRef = useRef<HTMLDivElement | null>(null);
   const leftWrapRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +128,8 @@ export default function AmbientVisualizer() {
   const rightHaloRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!wideEnough) return;
+
     let raf = 0;
     const data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
     let rotationLeft = 0;
@@ -166,7 +186,7 @@ export default function AmbientVisualizer() {
 
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [analyser, isPlaying]);
+  }, [analyser, isPlaying, wideEnough]);
 
   return (
     <>
