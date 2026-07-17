@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
-type TabName = 'home' | 'videos' | 'playlists' | 'mixer';
+type TabName = 'home' | 'videos' | 'playlists' | 'mixer' | 'offline';
 
 function TabIcon({ name, active }: { name: TabName; active: boolean }) {
   const stroke = active ? 2.2 : 1.7;
@@ -71,6 +71,22 @@ function TabIcon({ name, active }: { name: TabName; active: boolean }) {
           <line x1="19" y1="19" x2="19" y2="13" />
         </svg>
       );
+    case 'offline':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 4v10" />
+          <path d="M8 10l4 4 4-4" />
+          <path d="M5 18h14" />
+        </svg>
+      );
   }
 }
 
@@ -88,6 +104,7 @@ export default function BottomNav() {
     { href: '/videos', label: t.nav.videos, icon: 'videos' },
     { href: '/playlists', label: t.nav.playlists, icon: 'playlists' },
     { href: '/mixer', label: t.nav.mixer, icon: 'mixer' },
+    { href: '/offline', label: t.nav.offline, icon: 'offline' },
   ];
 
   return (
