@@ -17,11 +17,16 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
 
   const isOwner = Boolean(user && user.id === (playlist as Playlist).owner_id);
 
-  const { data: items } = await supabase
-    .from('playlist_tracks')
-    .select('position, tracks(*, profiles(*))')
-    .eq('playlist_id', id)
-    .order('position', { ascending: true });
+  const [{ data: items }, { data: myLikes }] = await Promise.all([
+    supabase
+      .from('playlist_tracks')
+      .select('position, tracks(*, profiles(*))')
+      .eq('playlist_id', id)
+      .order('position', { ascending: true }),
+    user ? supabase.from('track_likes').select('track_id').eq('user_id', user.id) : Promise.resolve({ data: null }),
+  ]);
+
+  const likedTrackIds = new Set((myLikes ?? []).map((l) => l.track_id as string));
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 pb-32">
@@ -48,6 +53,7 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
               sharePath={`/track/${track.id}`}
               playlistId={id}
               canRemoveFromPlaylist={isOwner}
+              likedByMe={likedTrackIds.has(track.id)}
             />
           );
         })}
