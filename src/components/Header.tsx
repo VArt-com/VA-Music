@@ -61,7 +61,7 @@ export default async function Header() {
             </>
           )}
           {whatsappNumber && (
-            
+            <a
               href={`https://wa.me/${whatsappNumber}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -71,7 +71,7 @@ export default async function Header() {
               <WhatsAppIcon className="w-5 h-5" />
             </a>
           )}
-          
+          <a
             href={kofi}
             target="_blank"
             rel="noopener noreferrer"
