@@ -35,11 +35,15 @@ export default async function HomePage({
     query = query.ilike('title', `%${q}%`);
   }
 
-  const [{ data: tracks, count: matchCount }, { count: totalTracks }, { count: totalVideos }] = await Promise.all([
-    query,
-    supabase.from('tracks').select('*', { count: 'exact', head: true }),
-    supabase.from('videos').select('*', { count: 'exact', head: true }),
-  ]);
+  const [{ data: tracks, count: matchCount }, { count: totalTracks }, { count: totalVideos }, { data: myLikes }] =
+    await Promise.all([
+      query,
+      supabase.from('tracks').select('*', { count: 'exact', head: true }),
+      supabase.from('videos').select('*', { count: 'exact', head: true }),
+      user ? supabase.from('track_likes').select('track_id').eq('user_id', user.id) : Promise.resolve({ data: null }),
+    ]);
+
+  const likedTrackIds = new Set((myLikes ?? []).map((l) => l.track_id as string));
 
   const totalPages = Math.max(1, Math.ceil((matchCount ?? 0) / PAGE_SIZE));
 
@@ -113,6 +117,7 @@ export default async function HomePage({
               sharePath={`/track/${track.id}`}
               queue={nowPlayingList}
               queueIndex={index}
+              likedByMe={likedTrackIds.has(track.id)}
             />
           );
         })}
