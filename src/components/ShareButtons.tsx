@@ -8,10 +8,15 @@ export default function ShareButtons({
   path,
   title,
   compact = false,
+  onShare,
 }: {
   path: string;
   title: string;
   compact?: boolean;
+  /** Called once whenever a share actually completes (native sheet, a
+   *  platform link click, or copying the link) — lets callers track a
+   *  share count without ShareButtons needing to know anything about it. */
+  onShare?: () => void;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -71,6 +76,7 @@ export default function ShareButtons({
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      onShare?.();
       setTimeout(() => setCopied(false), 1500);
     } catch {
       // clipboard API unavailable — ignore, user can still use the platform links
@@ -81,6 +87,7 @@ export default function ShareButtons({
     if (canNativeShare) {
       try {
         await navigator.share({ title, url });
+        onShare?.();
         return;
       } catch {
         // user cancelled the native share sheet, or it isn't actually supported
