@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '@/lib/player/PlayerContext';
 import { useI18n } from '@/lib/i18n/I18nProvider';
@@ -86,10 +87,12 @@ export default function PlayerBar() {
 
       <div className="max-w-3xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3 flex items-center gap-2.5 sm:gap-4">
         {current.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={current.coverUrl}
             alt=""
+            width={48}
+            height={48}
+            sizes="48px"
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover shadow-neon-sm shrink-0"
           />
         ) : (
