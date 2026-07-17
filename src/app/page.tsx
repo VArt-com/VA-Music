@@ -7,7 +7,6 @@ import type { Track } from '@/lib/types';
 import type { NowPlaying } from '@/lib/player/PlayerContext';
 
 const PAGE_SIZE = 50;
-const SHELF_SIZE = 10;
 
 export default async function HomePage({
   searchParams,
@@ -35,13 +34,28 @@ export default async function HomePage({
     query = query.ilike('title', `%${q}%`);
   }
 
-  const [{ data: tracks, count: matchCount }, { count: totalTracks }, { count: totalVideos }, { data: myLikes }] =
-    await Promise.all([
-      query,
-      supabase.from('tracks').select('*', { count: 'exact', head: true }),
-      supabase.from('videos').select('*', { count: 'exact', head: true }),
-      user ? supabase.from('track_likes').select('track_id').eq('user_id', user.id) : Promise.resolve({ data: null }),
-    ]);
+  // Only show the big-cover shelf on the unfiltered first page — once
+  // someone is searching or paging through results it stops being "what's
+  // fresh" and should just be the plain list.
+  const showShelf = !q && page === 1;
+
+  const [
+    { data: tracks, count: matchCount },
+    { count: totalTracks },
+    { count: totalVideos },
+    { data: myLikes },
+    { data: shelfTracks },
+  ] = await Promise.all([
+    query,
+    supabase.from('tracks').select('*', { count: 'exact', head: true }),
+    supabase.from('videos').select('*', { count: 'exact', head: true }),
+    user ? supabase.from('track_likes').select('track_id').eq('user_id', user.id) : Promise.resolve({ data: null }),
+    // The shelf browses every track on the platform, not just this page, so
+    // people can scroll all the way through it — not just the newest handful.
+    showShelf
+      ? supabase.from('tracks').select('*, profiles(*)').order('created_at', { ascending: false })
+      : Promise.resolve({ data: null }),
+  ]);
 
   const likedTrackIds = new Set((myLikes ?? []).map((l) => l.track_id as string));
 
@@ -55,26 +69,23 @@ export default async function HomePage({
     return qs ? `/?${qs}` : '/';
   };
 
-  const nowPlayingList: NowPlaying[] =
-    (tracks as Track[] | null)?.map((track) => {
-      const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
-      const coverUrl = track.cover_path
-        ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
-        : null;
-      return {
-        id: track.id,
-        title: track.title,
-        artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
-        artistId: track.artist_id,
-        audioUrl,
-        coverUrl,
-      };
-    }) ?? [];
+  const toNowPlaying = (track: Track): NowPlaying => {
+    const audioUrl = supabase.storage.from('tracks').getPublicUrl(track.file_path).data.publicUrl;
+    const coverUrl = track.cover_path
+      ? supabase.storage.from('covers').getPublicUrl(track.cover_path).data.publicUrl
+      : null;
+    return {
+      id: track.id,
+      title: track.title,
+      artist: track.profiles?.display_name || track.profiles?.username || t.common.unknownArtist,
+      artistId: track.artist_id,
+      audioUrl,
+      coverUrl,
+    };
+  };
 
-  // Only show the big-cover shelf on the unfiltered first page — once
-  // someone is searching or paging through results it stops being "what's
-  // fresh" and should just be the plain list.
-  const showShelf = !q && page === 1;
+  const nowPlayingList: NowPlaying[] = (tracks as Track[] | null)?.map(toNowPlaying) ?? [];
+  const shelfList: NowPlaying[] = (shelfTracks as Track[] | null)?.map(toNowPlaying) ?? [];
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
@@ -88,7 +99,7 @@ export default async function HomePage({
         </p>
       </div>
 
-      {showShelf && <TrackShelf tracks={nowPlayingList.slice(0, SHELF_SIZE)} queue={nowPlayingList} />}
+      {showShelf && <TrackShelf tracks={shelfList} queue={shelfList} />}
 
       <form className="mb-6" action="/">
         <input
