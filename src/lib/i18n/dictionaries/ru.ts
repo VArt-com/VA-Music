@@ -29,6 +29,8 @@ const ru: Dictionary = {
     pause: 'Пауза',
     volume: 'Громкость',
     eq: 'EQ',
+    close: 'Закрыть',
+    nowPlaying: 'Сейчас играет',
   },
   equalizer: {
     bands: { bass: 'Бас', mid: 'Средние', treble: 'Высокие' },
@@ -56,6 +58,9 @@ const ru: Dictionary = {
     downloadOffline: 'Скачать офлайн',
     removeOffline: 'Удалить офлайн-копию',
     downloadingOffline: 'Скачиваю...',
+    editCover: 'Изменить обложку',
+    savingCover: 'Сохраняю...',
+    editCoverFailed: 'Не получилось сохранить',
   },
   home: {
     title: 'Свежая музыка',

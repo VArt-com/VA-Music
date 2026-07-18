@@ -29,6 +29,8 @@ const he: Dictionary = {
     pause: 'השהה',
     volume: 'עוצמת קול',
     eq: 'EQ',
+    close: 'סגירה',
+    nowPlaying: 'מתנגן עכשיו',
   },
   equalizer: {
     bands: { bass: 'בס', mid: 'אמצע', treble: 'טרבל' },
@@ -56,6 +58,9 @@ const he: Dictionary = {
     downloadOffline: 'שמירה לאופליין',
     removeOffline: 'הסרת עותק אופליין',
     downloadingOffline: 'מוריד...',
+    editCover: 'שינוי עטיפה',
+    savingCover: 'שומר...',
+    editCoverFailed: 'השמירה נכשלה',
   },
   home: {
     title: 'מוזיקה חדשה',

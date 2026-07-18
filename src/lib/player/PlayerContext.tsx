@@ -68,6 +68,13 @@ type PlayerContextType = {
   setVolume: (value: number) => void;
   playerBarHeight: number;
   setPlayerBarHeight: (height: number) => void;
+  // Full-screen "Now Playing" view — opened by tapping the mini-player bar,
+  // closed via its own close button. Kept in context (rather than local
+  // component state) so any component can trigger it, e.g. a future
+  // notification tap or deep link.
+  fullscreenOpen: boolean;
+  openFullscreen: () => void;
+  closeFullscreen: () => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -103,6 +110,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [eq, setEqState] = useState<EQBands>(EQ_PRESETS.flat);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [playerBarHeight, setPlayerBarHeight] = useState(0);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const [queue, setQueue] = useState<NowPlaying[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
@@ -353,6 +361,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [setEq]
   );
 
+  const openFullscreen = useCallback(() => setFullscreenOpen(true), []);
+  const closeFullscreen = useCallback(() => setFullscreenOpen(false), []);
+
+  // Tells the OS-level Now Playing / Control Center widget where we are in
+  // the current track (duration, position, playback rate), separate from
+  // the metadata (title/artist/artwork) set below. Without this call, iOS
+  // in particular sometimes falls back to a bare scrubber + generic ±10s
+  // skip buttons instead of a proper track-aware widget with prev/next —
+  // setPositionState is what tells it "this is a real, seekable track".
+  const updatePositionState = useCallback((audio: HTMLAudioElement) => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    if (typeof navigator.mediaSession.setPositionState !== 'function') return;
+    if (!audio.duration || !isFinite(audio.duration)) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: audio.duration,
+        playbackRate: audio.playbackRate || 1,
+        position: Math.min(audio.currentTime, audio.duration),
+      });
+    } catch {
+      // Can throw if called with a stale position right as the track swaps —
+      // safe to ignore, the next timeupdate tick will correct it.
+    }
+  }, []);
+
   // Foreground element: drives all visible UI state (progress bar, play/pause
   // icon, duration) plus auto-advance when a track ends.
   useEffect(() => {
@@ -360,8 +393,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!audio) return;
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    const onTime = () => setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
-    const onLoaded = () => setDuration(audio.duration || 0);
+    const onTime = () => {
+      setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+      updatePositionState(audio);
+    };
+    const onLoaded = () => {
+      setDuration(audio.duration || 0);
+      updatePositionState(audio);
+    };
     const onEnded = () => advanceOnEnded();
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
@@ -375,7 +414,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [advanceOnEnded]);
+  }, [advanceOnEnded, updatePositionState]);
 
   // Background element: only needs to auto-advance to the next track when
   // one finishes while the screen is locked — nothing in the UI is visible
@@ -446,7 +485,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           ]
         : [],
     });
-  }, [current]);
+    // Refresh the position state right away on every track change too — not
+    // just on timeupdate/loadedmetadata — so the lock-screen widget doesn't
+    // briefly show stale duration/position from the previous track.
+    const audio = getActiveAudio();
+    if (audio) updatePositionState(audio);
+  }, [current, getActiveAudio, updatePositionState]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
@@ -462,6 +506,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const audio = getActiveAudio();
       if (audio && details.seekTime != null) {
         audio.currentTime = details.seekTime;
+        updatePositionState(audio);
       }
     });
     // On iOS, registering seekbackward/seekforward alongside nexttrack/previoustrack
@@ -496,7 +541,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       navigator.mediaSession.setActionHandler('nexttrack', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
     };
-  }, [next, previous, getActiveAudio]);
+  }, [next, previous, getActiveAudio, updatePositionState]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
@@ -526,6 +571,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         setVolume,
         playerBarHeight,
         setPlayerBarHeight,
+        fullscreenOpen,
+        openFullscreen,
+        closeFullscreen,
       }}
     >
       {children}

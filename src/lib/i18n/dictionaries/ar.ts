@@ -29,6 +29,8 @@ const ar: Dictionary = {
     pause: 'إيقاف مؤقت',
     volume: 'مستوى الصوت',
     eq: 'الموازن',
+    close: 'إغلاق',
+    nowPlaying: 'يتم التشغيل الآن',
   },
   equalizer: {
     bands: { bass: 'باس', mid: 'متوسط', treble: 'حاد' },
@@ -56,6 +58,9 @@ const ar: Dictionary = {
     downloadOffline: 'حفظ للاستماع دون إنترنت',
     removeOffline: 'إزالة النسخة المحفوظة',
     downloadingOffline: 'جارٍ التحميل...',
+    editCover: 'تغيير الغلاف',
+    savingCover: 'جارٍ الحفظ...',
+    editCoverFailed: 'تعذّر الحفظ',
   },
   home: {
     title: 'موسيقى جديدة',

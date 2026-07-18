@@ -29,6 +29,8 @@ const en: Dictionary = {
     pause: 'Pause',
     volume: 'Volume',
     eq: 'EQ',
+    close: 'Close',
+    nowPlaying: 'Now Playing',
   },
   equalizer: {
     bands: { bass: 'Bass', mid: 'Mid', treble: 'Treble' },
@@ -56,6 +58,9 @@ const en: Dictionary = {
     downloadOffline: 'Save offline',
     removeOffline: 'Remove offline copy',
     downloadingOffline: 'Downloading...',
+    editCover: 'Change cover',
+    savingCover: 'Saving...',
+    editCoverFailed: "Couldn't save",
   },
   home: {
     title: 'Fresh music',

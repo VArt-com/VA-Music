@@ -11,6 +11,7 @@ import ShareButtons from './ShareButtons';
 import AddToPlaylistButton from './AddToPlaylistButton';
 import OfflineDownloadButton from './OfflineDownloadButton';
 import LikeButton from './LikeButton';
+import EditCoverButton from './EditCoverButton';
 
 export default function TrackCard({
   track,
@@ -100,9 +101,9 @@ export default function TrackCard({
   return (
     // The title now gets its own full-width line and is never truncated —
     // long names wrap instead of being cut off. Every action (like, add to
-    // playlist, offline, share, download, remove/delete) lives in a second
-    // row underneath that wraps freely, so there's no horizontal squeeze or
-    // overlap on any screen size, phone or desktop.
+    // playlist, offline, share, download, edit cover, remove/delete) lives
+    // in a second row underneath that wraps freely, so there's no
+    // horizontal squeeze or overlap on any screen size, phone or desktop.
     <div className="group flex items-start gap-3 py-3 px-2 rounded-lg border-b border-white/5 last:border-b-0 hover:bg-white/[0.04] transition">
       <button
         type="button"
@@ -171,6 +172,9 @@ export default function TrackCard({
           </a>
           {playlistId && canRemoveFromPlaylist && (
             <DeleteButton onDelete={handleRemoveFromPlaylist} label={t.playlists.removeFromPlaylist} />
+          )}
+          {isOwner && currentUserId && (
+            <EditCoverButton trackId={track.id} userId={currentUserId} oldCoverPath={track.cover_path} />
           )}
           {isOwner && <DeleteButton onDelete={handleDelete} />}
         </div>

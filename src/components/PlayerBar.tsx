@@ -34,6 +34,7 @@ export default function PlayerBar() {
     previous,
     hasNext,
     hasPrevious,
+    openFullscreen,
   } = usePlayer();
   const { t } = useI18n();
   const [showEq, setShowEq] = useState(false);
@@ -86,30 +87,33 @@ export default function PlayerBar() {
       )}
 
       <div className="max-w-3xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3 flex items-center gap-2.5 sm:gap-4">
-        {current.coverUrl ? (
-          <Image
-            src={current.coverUrl}
-            alt=""
-            width={48}
-            height={48}
-            sizes="48px"
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover shadow-neon-sm shrink-0"
-          />
-        ) : (
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-fuchsia-600 to-violet-600 shrink-0" />
-        )}
+        {/* Tapping the cover/title area opens the full-screen "Now Playing"
+            view (Spotify-style) — separate from the artist link and the
+            transport buttons, which each keep their own behavior. */}
+        <button
+          type="button"
+          onClick={openFullscreen}
+          className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0 text-left"
+          aria-label={t.player.nowPlaying}
+        >
+          {current.coverUrl ? (
+            <Image
+              src={current.coverUrl}
+              alt=""
+              width={48}
+              height={48}
+              sizes="48px"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover shadow-neon-sm shrink-0"
+            />
+          ) : (
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-fuchsia-600 to-violet-600 shrink-0" />
+          )}
 
-        <div className="flex-1 min-w-0">
-          <Link href={`/track/${current.id}`} className="block text-sm font-medium truncate hover:text-fuchsia-300">
-            {current.title}
-          </Link>
-          <Link
-            href={`/artist/${current.artistId}`}
-            className="block text-xs text-white/50 truncate hover:text-fuchsia-300"
-          >
-            {current.artist}
-          </Link>
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium truncate">{current.title}</p>
+            <p className="text-xs text-white/50 truncate">{current.artist}</p>
+          </div>
+        </button>
 
         <div className="flex items-center gap-1 shrink-0">
           <button

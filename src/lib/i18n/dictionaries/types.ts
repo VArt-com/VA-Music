@@ -29,6 +29,8 @@ export type Dictionary = {
     pause: string;
     volume: string;
     eq: string;
+    close: string;
+    nowPlaying: string;
   };
   equalizer: {
     bands: {
@@ -60,6 +62,9 @@ export type Dictionary = {
     downloadOffline: string;
     removeOffline: string;
     downloadingOffline: string;
+    editCover: string;
+    savingCover: string;
+    editCoverFailed: string;
   };
   home: {
     title: string;
