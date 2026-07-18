@@ -9,6 +9,19 @@
 html,
 body {
   min-height: 100%;
+  /* Stops the "rubber band" bounce past the top/bottom edge (which reveals
+     a blank area behind the page and makes the whole thing feel like it's
+     being dragged around) and the two-finger/edge-swipe page-navigation
+     gesture some browsers trigger on overscroll. Vertical scrolling of the
+     actual content still works completely normally — this only removes the
+     bounce-past-the-edge and drag-the-whole-page behavior, which is what
+     read as "moves wherever, can be dragged anywhere." */
+  overscroll-behavior: none;
+  /* Prevents the double-tap-to-zoom gesture; pinch-zoom itself is already
+     disabled via the viewport meta (maximumScale/userScalable in
+     layout.tsx) but double-tap zoom is a separate browser gesture that
+     needs this to also be turned off. */
+  touch-action: manipulation;
 }
 
 body {
