@@ -12,8 +12,12 @@
 // listening are handled separately, in IndexedDB, by src/lib/offline/db.ts
 // — that approach works reliably on iOS Safari, where service-worker-
 // intercepted <audio> range requests historically have not.
-
-const CACHE_NAME = 'music-world-shell-v2';
+//
+// CACHE_NAME bumped (v2 -> v3) alongside the manifest/viewport/PWA-install
+// fixes, so anyone who already has the old service worker installed on
+// their phone is guaranteed to pick up the new shell instead of serving a
+// stale cached copy of the old one.
+const CACHE_NAME = 'music-world-shell-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
