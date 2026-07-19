@@ -472,26 +472,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !current) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: current.title,
-      artist: current.artist,
-      artwork: current.coverUrl
-        ? [
-            { src: current.coverUrl, sizes: '96x96', type: 'image/png' },
-            { src: current.coverUrl, sizes: '256x256', type: 'image/png' },
-            { src: current.coverUrl, sizes: '512x512', type: 'image/png' },
-          ]
-        : [],
-    });
-    // Refresh the position state right away on every track change too — not
-    // just on timeupdate/loadedmetadata — so the lock-screen widget doesn't
-    // briefly show stale duration/position from the previous track.
-    const audio = getActiveAudio();
-    if (audio) updatePositionState(audio);
-  }, [current, getActiveAudio, updatePositionState]);
-
+  // Media Session: metadata (title/artist/artwork) AND all action handlers
+  // (play/pause/stop/seek/prev/next) are now set together, inside the same
+  // effect, every time the track changes — not metadata in one effect and
+  // handlers registered once at mount in another. iOS's Now Playing widget
+  // has been unreliable about picking up prev/next buttons in this app
+  // (tried across several previous rounds); re-registering everything in
+  // lockstep with the track, right as playback starts, is a known mitigation
+  // for that — some WebKit versions only build the full button set from a
+  // action-handler snapshot taken close to when metadata last changed.
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
 
@@ -501,6 +490,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
     navigator.mediaSession.setActionHandler('pause', () => {
       getActiveAudio()?.pause();
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      const audio = getActiveAudio();
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
     });
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       const audio = getActiveAudio();
@@ -532,16 +528,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       previous();
     });
 
+    if (current) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: current.title,
+        artist: current.artist,
+        artwork: current.coverUrl
+          ? [
+              { src: current.coverUrl, sizes: '96x96', type: 'image/png' },
+              { src: current.coverUrl, sizes: '256x256', type: 'image/png' },
+              { src: current.coverUrl, sizes: '512x512', type: 'image/png' },
+            ]
+          : [],
+      });
+      // Refresh the position state right away on every track change too —
+      // not just on timeupdate/loadedmetadata — so the lock-screen widget
+      // doesn't briefly show stale duration/position from the previous track.
+      const audio = getActiveAudio();
+      if (audio) updatePositionState(audio);
+    }
+
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
       navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('stop', null);
       navigator.mediaSession.setActionHandler('seekto', null);
       navigator.mediaSession.setActionHandler('seekbackward', null);
       navigator.mediaSession.setActionHandler('seekforward', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
     };
-  }, [next, previous, getActiveAudio, updatePositionState]);
+  }, [current, next, previous, getActiveAudio, updatePositionState]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
