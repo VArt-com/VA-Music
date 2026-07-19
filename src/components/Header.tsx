@@ -14,7 +14,18 @@ export default async function Header() {
   const t = await getDictionary();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl"
+      // With viewport-fit=cover (added for the standalone-app fix) the page
+      // content is allowed to draw under the iPhone status bar / notch —
+      // without this padding, the "Music World" logo at the top of a
+      // narrow phone (e.g. iPhone 13 mini, where the header row sits
+      // tightest) can end up rendered partly or fully behind the notch and
+      // look invisible. This padding pushes the header down to respect the
+      // safe area on every device, same pattern BottomNav already uses at
+      // the bottom of the screen.
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-4">
         <Link href="/" className="font-extrabold text-lg tracking-tight neon-text">
           🎵 {t.brand.name}
