@@ -143,6 +143,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
   }, [queue, queueIndex]);
 
+  // Retries a play() call a few times with a short delay instead of
+  // silently giving up on the first rejection. This matters most while the
+  // screen is locked: a play() call can fail transiently because the
+  // network fetch for the new src hasn't resolved yet (mobile OS network
+  // throttling while locked), not because playback is actually blocked —
+  // one retry a moment later usually succeeds once the data has arrived.
+  const attemptPlay = useCallback((audio: HTMLAudioElement, retriesLeft = 4) => {
+    audio.play().catch(() => {
+      if (retriesLeft > 0) {
+        setTimeout(() => attemptPlay(audio, retriesLeft - 1), 500);
+      }
+    });
+  }, []);
+
   const ensureGraph = useCallback(() => {
     if (isIOS() || audioCtxRef.current || !audioRef.current) return;
     try {
@@ -227,7 +241,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           currentIdRef.current = track.id;
         }
         setCurrent(track);
-        audio.play().catch(() => {});
+        attemptPlay(audio);
         return;
       }
 
@@ -267,10 +281,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         currentIdRef.current = track.id;
       }
       setCurrent(track);
-      audio.play().catch(() => {});
+      attemptPlay(audio);
       if (other && !other.paused) other.pause();
     },
-    [ensureGraph]
+    [ensureGraph, attemptPlay]
   );
 
   const play = useCallback(
@@ -328,9 +342,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         // ignore
       }
     }
-    if (audio.paused) audio.play().catch(() => {});
+    if (audio.paused) attemptPlay(audio);
     else audio.pause();
-  }, [getActiveAudio]);
+  }, [getActiveAudio, attemptPlay]);
 
   const seek = useCallback((ratio: number) => {
     const audio = audioRef.current;
@@ -396,36 +410,77 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const onTime = () => {
       setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
       updatePositionState(audio);
+      // Belt-and-suspenders fix for "track is progressing but silent": the
+      // <audio> element itself keeps decoding/advancing currentTime even
+      // when the Web Audio graph it's routed through has its AudioContext
+      // suspended — in that state you get a moving progress bar with zero
+      // audible output, because all sound has to pass through the graph.
+      // The context's own 'statechange' listener only fires when the state
+      // actually flips, so if a resume() attempt around a lock/unlock ever
+      // silently fails to stick, nothing else would ever retry it. Checking
+      // here, on every timeupdate tick while audio is audibly progressing,
+      // catches and self-heals that case within a second or so.
+      const ctx = audioCtxRef.current;
+      if (ctx && ctx.state === 'suspended' && !audio.paused) {
+        ctx.resume().catch(() => {});
+      }
     };
     const onLoaded = () => {
       setDuration(audio.duration || 0);
       updatePositionState(audio);
     };
     const onEnded = () => advanceOnEnded();
+    // If the network stalls mid-load (common right as a phone comes back
+    // from a lock/sleep state), the element can get stuck instead of ever
+    // firing 'ended' or continuing — nudge it with a reload + retry rather
+    // than leaving playback silently dead until the user notices.
+    const onError = () => {
+      if (!audio.src) return;
+      const src = audio.src;
+      audio.load();
+      audio.src = src;
+      attemptPlay(audio);
+    };
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
     return () => {
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('timeupdate', onTime);
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
     };
-  }, [advanceOnEnded, updatePositionState]);
+  }, [advanceOnEnded, updatePositionState, attemptPlay]);
 
   // Background element: only needs to auto-advance to the next track when
   // one finishes while the screen is locked — nothing in the UI is visible
-  // to update anyway.
+  // to update anyway. Also gets the same stall-recovery as the foreground
+  // element, since this is the one actually carrying playback through a
+  // real lock — a stalled fetch here is exactly what produces "stops by
+  // itself" or "doesn't move to the next track" while the phone is locked.
   useEffect(() => {
     const bg = bgAudioRef.current;
     if (!bg) return;
     const onEnded = () => advanceOnEnded();
+    const onError = () => {
+      if (!bg.src) return;
+      const src = bg.src;
+      bg.load();
+      bg.src = src;
+      attemptPlay(bg);
+    };
     bg.addEventListener('ended', onEnded);
-    return () => bg.removeEventListener('ended', onEnded);
-  }, [advanceOnEnded]);
+    bg.addEventListener('error', onError);
+    return () => {
+      bg.removeEventListener('ended', onEnded);
+      bg.removeEventListener('error', onError);
+    };
+  }, [advanceOnEnded, attemptPlay]);
 
   // The actual lock-screen fix: hand playback off between the two elements
   // as the page hides/shows, instead of trying to keep the Web Audio graph
@@ -441,7 +496,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       bg.currentTime = fg.currentTime;
       bg.volume = fg.volume;
       fg.pause();
-      bg.play().catch(() => {});
+      attemptPlay(bg);
     };
 
     const goForeground = () => {
@@ -454,7 +509,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       fg.currentTime = bg.currentTime;
       bg.pause();
       audioCtxRef.current?.resume().catch(() => {});
-      fg.play().catch(() => {});
+      attemptPlay(fg);
     };
 
     const onVisibility = () => {
@@ -470,7 +525,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('pageshow', goForeground);
       window.removeEventListener('focus', goForeground);
     };
-  }, []);
+  }, [attemptPlay]);
 
   // Media Session: metadata (title/artist/artwork) AND all action handlers
   // (play/pause/stop/seek/prev/next) are now set together, inside the same
@@ -486,7 +541,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     navigator.mediaSession.setActionHandler('play', () => {
       audioCtxRef.current?.resume().catch(() => {});
-      getActiveAudio()?.play().catch(() => {});
+      const audio = getActiveAudio();
+      if (audio) attemptPlay(audio);
     });
     navigator.mediaSession.setActionHandler('pause', () => {
       getActiveAudio()?.pause();
@@ -557,7 +613,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       navigator.mediaSession.setActionHandler('nexttrack', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
     };
-  }, [current, next, previous, getActiveAudio, updatePositionState]);
+  }, [current, next, previous, getActiveAudio, updatePositionState, attemptPlay]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
