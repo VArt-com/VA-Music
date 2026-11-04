@@ -52,7 +52,7 @@ jobs:
     continue-on-error: true  # остаток требует мажорного апгрейда Next.js; решается через PR от Dependabot
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - run: npm audit --audit-level=high
