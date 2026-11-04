@@ -23,6 +23,11 @@ const he: Dictionary = {
     likeProject: 'אוהבים את הפרויקט?',
     supportKofi: 'תמכו ב-Ko-fi',
     whatsappCta: 'לכתוב בוואטסאפ',
+    privacy: 'פרטיות',
+    terms: 'תנאי שימוש',
+    accessibility: 'נגישות',
+    registerConsent: 'בהרשמה אתם מסכימים ל: {terms} · {privacy}',
+    rightsCheckbox: 'אני מצהיר/ה שהתוכן שלי או שיש לי זכות לפרסמו, ומסכים/ה לתנאי השימוש.',
   },
   player: {
     play: 'נגן',

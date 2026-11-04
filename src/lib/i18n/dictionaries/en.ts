@@ -23,6 +23,11 @@ const en: Dictionary = {
     likeProject: 'Like the project?',
     supportKofi: 'Support on Ko-fi',
     whatsappCta: 'Message on WhatsApp',
+    privacy: 'Privacy',
+    terms: 'Terms',
+    accessibility: 'Accessibility',
+    registerConsent: 'By registering you agree to: {terms} · {privacy}',
+    rightsCheckbox: 'I confirm that I own this content or have the right to publish it, and I agree to the Terms of Use.',
   },
   player: {
     play: 'Play',

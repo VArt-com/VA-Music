@@ -23,6 +23,11 @@ export type Dictionary = {
     likeProject: string;
     supportKofi: string;
     whatsappCta: string;
+    privacy: string;
+    terms: string;
+    accessibility: string;
+    registerConsent: string;
+    rightsCheckbox: string;
   };
   player: {
     play: string;

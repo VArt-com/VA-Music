@@ -27,6 +27,7 @@ export default function UploadForm({ userId }: { userId: string }) {
   const [files, setFiles] = useState<File[]>([]);
   const [cover, setCover] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rights, setRights] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, FileStatus>>({});
   const router = useRouter();
@@ -190,9 +191,14 @@ export default function UploadForm({ userId }: { userId: string }) {
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
+      <label className="flex items-start gap-2 text-sm text-white/70">
+        <input type="checkbox" required checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-1" />
+        <span>{t.footer.rightsCheckbox}</span>
+      </label>
+
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !rights}
         className="w-full btn-neon disabled:opacity-50 rounded-lg py-2 font-medium"
       >
         {busy ? t.uploadForm.uploading : t.uploadForm.publish}

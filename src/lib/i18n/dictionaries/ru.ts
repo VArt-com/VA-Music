@@ -23,6 +23,11 @@ const ru: Dictionary = {
     likeProject: 'Нравится проект?',
     supportKofi: 'Поддержи на Ko-fi',
     whatsappCta: 'Написать в WhatsApp',
+    privacy: 'Конфиденциальность',
+    terms: 'Условия',
+    accessibility: 'Доступность',
+    registerConsent: 'Регистрируясь, вы соглашаетесь: {terms} · {privacy}',
+    rightsCheckbox: 'Подтверждаю, что я владелец этого контента или имею право его публиковать, и принимаю Условия использования.',
   },
   player: {
     play: 'Играть',

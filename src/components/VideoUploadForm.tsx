@@ -14,6 +14,7 @@ export default function VideoUploadForm({ userId }: { userId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rights, setRights] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -117,7 +118,12 @@ export default function VideoUploadForm({ userId }: { userId: string }) {
         />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      <button type="submit" disabled={busy} className="w-full btn-neon disabled:opacity-50 rounded-lg py-2 font-medium">
+      <label className="flex items-start gap-2 text-sm text-white/70">
+        <input type="checkbox" required checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-1" />
+        <span>{t.footer.rightsCheckbox}</span>
+      </label>
+
+      <button type="submit" disabled={busy || !rights} className="w-full btn-neon disabled:opacity-50 rounded-lg py-2 font-medium">
         {busy ? t.videoUploadForm.uploading : t.videoUploadForm.publish}
       </button>
       <p className="text-xs text-white/40">{t.videoUploadForm.rightsNotice}</p>

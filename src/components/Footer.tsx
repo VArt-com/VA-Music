@@ -34,6 +34,11 @@ export default async function Footer() {
           </a>
         </p>
       )}
+      <nav className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs" aria-label="Legal">
+        <a href="/privacy" className="underline hover:text-white/80">{t.footer.privacy}</a>
+        <a href="/terms" className="underline hover:text-white/80">{t.footer.terms}</a>
+        <a href="/accessibility" className="underline hover:text-white/80">{t.footer.accessibility}</a>
+      </nav>
     </footer>
   );
 }

@@ -69,6 +69,17 @@ export default function RegisterPage() {
         <button type="submit" className="w-full btn-neon rounded-lg py-2 font-medium">
           {t.auth.registerSubmit}
         </button>
+        <p className="text-xs text-white/50 text-center">
+          {t.footer.registerConsent.split(/(\{terms\}|\{privacy\})/).map((part, i) =>
+            part === '{terms}' ? (
+              <a key={i} href="/terms" target="_blank" className="underline">{t.footer.terms}</a>
+            ) : part === '{privacy}' ? (
+              <a key={i} href="/privacy" target="_blank" className="underline">{t.footer.privacy}</a>
+            ) : (
+              <span key={i}>{part}</span>
+            )
+          )}
+        </p>
       </form>
     </main>
   );
