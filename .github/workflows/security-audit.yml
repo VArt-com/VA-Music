@@ -1,0 +1,57 @@
+name: Security & Legal Audit
+
+on:
+  schedule:
+    - cron: '17 4 * * 0'   # каждое воскресенье, ~07:17 по Израилю
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quick-checks:
+    name: Quick checks (секреты в коде, опасные паттерны, юр. элементы)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/audit.sh
+
+  secret-scan:
+    name: Secret scan (вся история git)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --verbose --config .gitleaks.toml
+
+  codeql:
+    name: CodeQL (XSS, инъекции, небезопасный код)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v3
+
+  dependencies:
+    name: npm audit (уязвимые библиотеки)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm audit --audit-level=high

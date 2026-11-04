@@ -1,0 +1,11 @@
+title = "VArt gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Firebase web API keys публичны по дизайну (защита — в правилах Firestore, не в ключе)"
+paths = [
+  '''ourworld\.html$''',
+  '''jobsil\.html$''',
+]
