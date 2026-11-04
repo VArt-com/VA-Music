@@ -8,4 +8,5 @@ description = "Firebase web API keys публичны по дизайну (за�
 paths = [
   '''ourworld\.html$''',
   '''jobsil\.html$''',
+  '''\.env\.local$''',   # только NEXT_PUBLIC_ (anon-ключ Supabase, публичный по дизайну; защита — RLS)
 ]
